@@ -1,0 +1,22 @@
+{
+    "name": "example/woo-bulk-variation-pricer",
+    "description": "Bulk variation price editor for WooCommerce",
+    "type": "wordpress-plugin",
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.7",
+        "wp-coding-standards/wpcs": "^2.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "WBV\\": "includes/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "package": "zip -r dist/woo-bulk-variation-pricer.zip . -x .git/* vendor/* tests/* .github/* dist/*",
+        "make-pot": "bash scripts/generate-pot.sh"
+    }
+
+}

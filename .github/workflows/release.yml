@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+      - name: Package plugin into zip
+        run: |
+          mkdir -p dist
+          zip -r dist/woo-bulk-variation-pricer.zip . -x ".git/*" "vendor/*" "tests/*" ".github/*" "dist/*"
+      - name: Create GitHub release and upload asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/woo-bulk-variation-pricer.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

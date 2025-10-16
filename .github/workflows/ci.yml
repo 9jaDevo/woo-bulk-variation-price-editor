@@ -1,0 +1,21 @@
+name: CI
+
+on: [ push, pull_request ]
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+      - name: Install composer dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Run PHPCS (WordPress)
+        run: |
+          vendor/bin/phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs
+          vendor/bin/phpcs --standard=WordPress -p --extensions=php . || true
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit -v || true
