@@ -294,8 +294,9 @@ class WBV_Processor
 
     /**
      * Process a batch of default attribute updates.
+     * Optimized for 4GB RAM VPS - processes in chunks with memory management.
      * Expected $args array with keys:
-     * - operation_id, products (array of product_id => defaults), user_id
+     * - operation_id, products (array of product_id => defaults), operation_label, user_id
      */
     public static function process_defaults_batch($args)
     {
@@ -311,10 +312,13 @@ class WBV_Processor
 
         $operation_id = isset($args['operation_id']) ? $args['operation_id'] : '';
         $products = isset($args['products']) ? $args['products'] : array();
+        $operation_label = isset($args['operation_label']) ? $args['operation_label'] : '';
 
         if (empty($products) || ! is_array($products)) {
             return false;
         }
+
+        $processed_count = 0;
 
         foreach ($products as $pid => $defaults) {
             $pid = absint($pid);
@@ -346,7 +350,14 @@ class WBV_Processor
             do_action('wbv_after_default_change', $pid, $old_defaults, $defaults, array('operation_id' => $operation_id));
 
             // Log the change
-            WBV_Logger::log_default_change($operation_id, $pid, $old_defaults, $defaults, '');
+            WBV_Logger::log_default_change($operation_id, $pid, $old_defaults, $defaults, $operation_label);
+
+            $processed_count++;
+
+            // Clear object cache every 50 products to prevent memory buildup on 4GB VPS
+            if ($processed_count % 50 === 0 && function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }
         }
 
         return true;

@@ -958,7 +958,7 @@
         })
             .then(res => res.json())
             .then(data => {
-                displayDefaultsPreview(data.preview || []);
+                displayDefaultsPreview(data.preview || [], data.total_selected, data.preview_limit);
             })
             .catch(err => {
                 alert('Error: ' + err.message);
@@ -997,7 +997,16 @@
         })
             .then(res => res.json())
             .then(data => {
-                if (data.applied && data.applied.length > 0) {
+                if (data.status === 'scheduled') {
+                    // Background processing scheduled
+                    const message = data.message || `Scheduled ${data.total} product(s) for background processing in ${data.chunks} batch(es)`;
+                    alert(`✓ ${message}\n\nOperation ID: ${data.operation_id}\n\nThe update will run in the background. Large batches may take several minutes. Check the "Recent Operations" section below for progress.`);
+                    // Optionally refresh operations list
+                    if (typeof loadOperations === 'function') {
+                        setTimeout(() => loadOperations(), 2000);
+                    }
+                } else if (data.applied && data.applied.length > 0) {
+                    // Synchronous update completed
                     alert(`Successfully updated ${data.applied.length} product(s)`);
                     // Refresh the search to show updated defaults
                     qs('#wbv-search-btn').click();
@@ -1031,7 +1040,7 @@
         return defaults;
     }
 
-    function displayDefaultsPreview(preview) {
+    function displayDefaultsPreview(preview, totalSelected, previewLimit) {
         const previewDiv = qs('#wbv-preview');
         if (!previewDiv) return;
 
@@ -1045,6 +1054,18 @@
         const heading = document.createElement('h3');
         heading.textContent = 'Preview: Default Attributes Changes';
         previewDiv.appendChild(heading);
+
+        // Show warning if preview is limited
+        if (totalSelected && previewLimit && totalSelected > previewLimit) {
+            const warning = document.createElement('div');
+            warning.style.padding = '10px';
+            warning.style.background = '#fff3cd';
+            warning.style.border = '1px solid #ffc107';
+            warning.style.borderRadius = '4px';
+            warning.style.marginBottom = '15px';
+            warning.innerHTML = `<strong>⚠️ Preview Limited:</strong> Showing first ${previewLimit} of ${totalSelected} selected products. All ${totalSelected} products will be updated when you click "Apply Changes".`;
+            previewDiv.appendChild(warning);
+        }
 
         const table = document.createElement('table');
         table.className = 'wbv-preview-table';

@@ -848,6 +848,8 @@ class WBV_REST_Controller
      * - defaults: array keyed by product_id, each containing attribute => value pairs
      * - dry_run: boolean (preview mode)
      * - operation_label: string (optional)
+     * 
+     * For batches > 300 products, uses ActionScheduler for background processing.
      */
     public static function handle_set_defaults(WP_REST_Request $request)
     {
@@ -868,11 +870,124 @@ class WBV_REST_Controller
             return new WP_Error('missing_defaults', 'No default attributes specified', array('status' => 400));
         }
 
+        $total = count($product_ids);
         $preview = array();
         $applied = array();
         $errors = array();
         $operation_id = wp_generate_uuid4();
 
+        // Background processing threshold optimized for 4GB RAM VPS
+        // 300 products allows sufficient memory headroom
+        $chunk_size = (int) get_option('wbv_chunk_size', 100);
+        $bg_threshold = 300;
+
+        // Preview mode - always synchronous, limit to reasonable size
+        if ($dry_run) {
+            $preview_limit = 50; // Limit preview to first 50 products to avoid timeout
+            $preview_ids = array_slice($product_ids, 0, $preview_limit);
+
+            foreach ($preview_ids as $pid) {
+                $pid = absint($pid);
+                if (! $pid) {
+                    continue;
+                }
+
+                $product = wc_get_product($pid);
+                if (! $product || $product->get_type() !== 'variable') {
+                    continue;
+                }
+
+                $old_defaults = $product->get_default_attributes();
+                $new_defaults = isset($defaults[$pid]) ? $defaults[$pid] : array();
+
+                if (empty($new_defaults)) {
+                    continue;
+                }
+
+                // Sanitize new defaults
+                $sanitized_defaults = array();
+                foreach ($new_defaults as $attr_key => $attr_value) {
+                    $sanitized_key = sanitize_text_field($attr_key);
+                    $sanitized_value = sanitize_text_field($attr_value);
+                    if ($sanitized_key && $sanitized_value) {
+                        $sanitized_defaults[$sanitized_key] = $sanitized_value;
+                    }
+                }
+
+                $preview[] = array(
+                    'product_id' => $pid,
+                    'product_name' => $product->get_name(),
+                    'old_defaults' => $old_defaults,
+                    'new_defaults' => $sanitized_defaults,
+                );
+            }
+
+            return rest_ensure_response(array(
+                'preview' => $preview,
+                'total' => count($preview),
+                'total_selected' => $total,
+                'preview_limit' => $preview_limit,
+            ));
+        }
+
+        // Check if ActionScheduler is available and if we should use background processing
+        $use_bg = get_option('wbv_use_action_scheduler', true) &&
+            (function_exists('as_enqueue_async_action') || function_exists('as_schedule_single_action'));
+
+        // Use background processing for large batches
+        if ($use_bg && $total > $bg_threshold) {
+            // Build products data array for background processing
+            $products_data = array();
+            foreach ($product_ids as $pid) {
+                $pid = absint($pid);
+                if (! $pid || ! isset($defaults[$pid])) {
+                    continue;
+                }
+
+                $sanitized_defaults = array();
+                foreach ($defaults[$pid] as $attr_key => $attr_value) {
+                    $sanitized_key = sanitize_text_field($attr_key);
+                    $sanitized_value = sanitize_text_field($attr_value);
+                    if ($sanitized_key && $sanitized_value) {
+                        $sanitized_defaults[$sanitized_key] = $sanitized_value;
+                    }
+                }
+
+                if (! empty($sanitized_defaults)) {
+                    $products_data[$pid] = $sanitized_defaults;
+                }
+            }
+
+            // Split into chunks optimized for 4GB RAM
+            $chunks = array_chunk($products_data, $chunk_size, true);
+
+            // Schedule background jobs
+            foreach ($chunks as $i => $chunk) {
+                $args = array(
+                    'operation_id' => $operation_id,
+                    'products' => $chunk,
+                    'operation_label' => $operation_label,
+                    'user_id' => get_current_user_id(),
+                );
+
+                if (function_exists('as_enqueue_async_action')) {
+                    as_enqueue_async_action('wbv_run_defaults_batch', $args, 'wbvpricer');
+                } elseif (function_exists('as_schedule_single_action')) {
+                    // Stagger jobs by 3 seconds to reduce server load
+                    as_schedule_single_action(time() + ($i * 3), 'wbv_run_defaults_batch', $args, 'wbvpricer');
+                }
+            }
+
+            return rest_ensure_response(array(
+                'operation_id' => $operation_id,
+                'status' => 'scheduled',
+                'chunks' => count($chunks),
+                'total' => count($products_data),
+                'message' => sprintf('Scheduled %d product(s) for background processing in %d batch(es)', count($products_data), count($chunks)),
+            ));
+        }
+
+        // Synchronous processing for smaller batches
         foreach ($product_ids as $pid) {
             $pid = absint($pid);
             if (! $pid) {
@@ -905,41 +1020,27 @@ class WBV_REST_Controller
                 }
             }
 
-            if ($dry_run) {
-                // Preview mode: just return what would change
-                $preview[] = array(
-                    'product_id' => $pid,
-                    'product_name' => $product->get_name(),
-                    'old_defaults' => $old_defaults,
-                    'new_defaults' => $sanitized_defaults,
-                );
-            } else {
-                // Apply changes
-                do_action('wbv_before_default_change', $pid, $old_defaults, $sanitized_defaults, array('operation_id' => $operation_id));
+            // Apply changes
+            do_action('wbv_before_default_change', $pid, $old_defaults, $sanitized_defaults, array('operation_id' => $operation_id));
 
-                $result = WBV_Processor::set_default_attributes($pid, $sanitized_defaults);
+            $result = WBV_Processor::set_default_attributes($pid, $sanitized_defaults);
 
-                if (is_wp_error($result)) {
-                    $errors[] = array('product_id' => $pid, 'error' => $result->get_error_message());
-                    continue;
-                }
-
-                do_action('wbv_after_default_change', $pid, $old_defaults, $sanitized_defaults, array('operation_id' => $operation_id));
-
-                $applied[] = array(
-                    'product_id' => $pid,
-                    'product_name' => $product->get_name(),
-                    'old_defaults' => $old_defaults,
-                    'new_defaults' => $sanitized_defaults,
-                );
-
-                // Log for undo capability
-                WBV_Logger::log_default_change($operation_id, $pid, $old_defaults, $sanitized_defaults, $operation_label);
+            if (is_wp_error($result)) {
+                $errors[] = array('product_id' => $pid, 'error' => $result->get_error_message());
+                continue;
             }
-        }
 
-        if ($dry_run) {
-            return rest_ensure_response(array('preview' => $preview, 'total' => count($preview)));
+            do_action('wbv_after_default_change', $pid, $old_defaults, $sanitized_defaults, array('operation_id' => $operation_id));
+
+            $applied[] = array(
+                'product_id' => $pid,
+                'product_name' => $product->get_name(),
+                'old_defaults' => $old_defaults,
+                'new_defaults' => $sanitized_defaults,
+            );
+
+            // Log for undo capability
+            WBV_Logger::log_default_change($operation_id, $pid, $old_defaults, $sanitized_defaults, $operation_label);
         }
 
         return rest_ensure_response(array(
