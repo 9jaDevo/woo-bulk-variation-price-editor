@@ -777,7 +777,7 @@
     function setupModeHandlers() {
         const tabPrices = qs('#wbv-tab-prices');
         const tabDefaults = qs('#wbv-tab-defaults');
-        const priceControls = qs('#wbv-toolbar');
+        const priceControls = qs('#wbv-toolbar > div:last-child'); // Only the price editor controls section
         const defaultsControls = qs('#wbv-defaults-controls');
         const defaultsInstructions = qs('#wbv-defaults-instructions');
 
@@ -791,6 +791,12 @@
             if (priceControls) priceControls.style.display = '';
             if (defaultsControls) defaultsControls.style.display = 'none';
             if (defaultsInstructions) defaultsInstructions.style.display = 'none';
+
+            // Re-render products in price mode if we have them
+            const results = qs('#wbv-results');
+            if (results && lastProducts && lastProducts.length > 0) {
+                renderProducts(results, lastProducts);
+            }
         });
 
         tabDefaults.addEventListener('click', function (e) {
@@ -799,12 +805,14 @@
             tabDefaults.classList.add('nav-tab-active');
             tabPrices.classList.remove('nav-tab-active');
             if (priceControls) priceControls.style.display = 'none';
-            if (defaultsControls) defaultsControls.style.display = '';
-            if (defaultsInstructions) defaultsInstructions.style.display = '';
+            if (defaultsControls) defaultsControls.style.display = 'block';
+            if (defaultsInstructions) defaultsInstructions.style.display = 'block';
 
-            // Clear any existing results and show fresh instructions
+            // Re-render products in defaults mode if we have them
             const results = qs('#wbv-results');
-            if (results && !results.querySelector('.wbv-product')) {
+            if (results && lastProducts && lastProducts.length > 0) {
+                renderProductsForDefaults(results, lastProducts);
+            } else if (results && !results.querySelector('.wbv-product')) {
                 results.innerHTML = '<div style="text-align:center; padding:40px; color:#666;"><p style="font-size:16px;">👆 <strong>Start by searching for products above</strong></p><p>Use the search box to find variable products, then select them to set default attributes.</p></div>';
             }
         });
@@ -869,40 +877,24 @@
             container.appendChild(wrap);
         });
 
-        updateDefaultsSelector();
+        // Show the defaults selector panel automatically with all available attributes
+        showDefaultsSelector();
     }
 
-    function updateDefaultsSelector() {
-        const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+    function showDefaultsSelector() {
         const selector = qs('#wbv-defaults-selector');
         const attributesDiv = qs('#wbv-defaults-attributes');
 
-        console.log('updateDefaultsSelector called, selected:', selected.length, 'products');
+        if (!selector || !attributesDiv || !lastProducts) return;
 
-        if (selected.length === 0) {
-            if (selector) selector.style.display = 'none';
-            return;
-        }
+        // Show the panel
+        selector.style.display = 'block';
+        console.log('Showing defaults selector panel automatically');
 
-        if (selector) {
-            selector.style.display = 'block';
-            console.log('Showing defaults selector panel');
-        }
-
-        if (!attributesDiv) {
-            console.error('attributesDiv not found!');
-            return;
-        }
-
-        // Collect all unique attributes from selected products
+        // Collect ALL attributes from all products (not just selected ones)
         const attributesMap = new Map();
 
-        selected.forEach(cb => {
-            const pid = parseInt(cb.dataset.productId);
-            const product = lastProducts.find(p => p.product_id === pid);
-
-            console.log('Processing product:', pid, 'found:', !!product);
-
+        lastProducts.forEach(product => {
             if (product && product.variations) {
                 product.variations.forEach(v => {
                     if (v.attributes && Array.isArray(v.attributes)) {
@@ -921,10 +913,15 @@
             }
         });
 
-        console.log('Attributes found:', attributesMap.size);
+        console.log('Available attributes:', attributesMap.size);
 
         // Render attribute selectors
         attributesDiv.innerHTML = '';
+
+        if (attributesMap.size === 0) {
+            attributesDiv.innerHTML = '<p style="color:#999; font-style:italic;">No attributes found in the displayed products.</p>';
+            return;
+        }
 
         attributesMap.forEach((attrData, attrKey) => {
             const attrDiv = document.createElement('div');
@@ -934,6 +931,7 @@
             label.textContent = attrData.label + ': ';
             label.style.display = 'inline-block';
             label.style.minWidth = '150px';
+            label.style.fontWeight = 'bold';
             attrDiv.appendChild(label);
 
             const select = document.createElement('select');
@@ -955,6 +953,36 @@
             attrDiv.appendChild(select);
             attributesDiv.appendChild(attrDiv);
         });
+    }
+
+    function updateDefaultsSelector() {
+        const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+        const selector = qs('#wbv-defaults-selector');
+
+        console.log('updateDefaultsSelector called, selected:', selected.length, 'products');
+
+        if (!selector) return;
+
+        // Update the description to show how many products are selected
+        let descriptionElem = selector.querySelector('.wbv-selection-description');
+        if (!descriptionElem) {
+            descriptionElem = document.createElement('p');
+            descriptionElem.className = 'wbv-selection-description';
+            descriptionElem.style.fontWeight = 'bold';
+            descriptionElem.style.color = '#2271b1';
+            const firstPara = selector.querySelector('p');
+            if (firstPara) {
+                firstPara.parentNode.insertBefore(descriptionElem, firstPara.nextSibling);
+            }
+        }
+
+        if (selected.length === 0) {
+            descriptionElem.textContent = '⚠️  No products selected. Check the boxes above to select products.';
+            descriptionElem.style.color = '#d63638';
+        } else {
+            descriptionElem.textContent = `✓ ${selected.length} product(s) selected for default attribute update`;
+            descriptionElem.style.color = '#00a32a';
+        }
     }
 
     function handleDefaultsPreview() {
