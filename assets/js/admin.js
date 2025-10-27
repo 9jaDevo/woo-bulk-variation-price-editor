@@ -877,12 +877,22 @@
         const selector = qs('#wbv-defaults-selector');
         const attributesDiv = qs('#wbv-defaults-attributes');
 
+        console.log('updateDefaultsSelector called, selected:', selected.length, 'products');
+
         if (selected.length === 0) {
             if (selector) selector.style.display = 'none';
             return;
         }
 
-        if (selector) selector.style.display = '';
+        if (selector) {
+            selector.style.display = 'block';
+            console.log('Showing defaults selector panel');
+        }
+
+        if (!attributesDiv) {
+            console.error('attributesDiv not found!');
+            return;
+        }
 
         // Collect all unique attributes from selected products
         const attributesMap = new Map();
@@ -891,21 +901,27 @@
             const pid = parseInt(cb.dataset.productId);
             const product = lastProducts.find(p => p.product_id === pid);
 
+            console.log('Processing product:', pid, 'found:', !!product);
+
             if (product && product.variations) {
                 product.variations.forEach(v => {
-                    v.attributes.forEach(attr => {
-                        if (!attributesMap.has(attr.key)) {
-                            attributesMap.set(attr.key, {
-                                key: attr.key,
-                                label: attr.label,
-                                values: new Set()
-                            });
-                        }
-                        attributesMap.get(attr.key).values.add(attr.value);
-                    });
+                    if (v.attributes && Array.isArray(v.attributes)) {
+                        v.attributes.forEach(attr => {
+                            if (!attributesMap.has(attr.key)) {
+                                attributesMap.set(attr.key, {
+                                    key: attr.key,
+                                    label: attr.label,
+                                    values: new Set()
+                                });
+                            }
+                            attributesMap.get(attr.key).values.add(attr.value);
+                        });
+                    }
                 });
             }
         });
+
+        console.log('Attributes found:', attributesMap.size);
 
         // Render attribute selectors
         attributesDiv.innerHTML = '';
@@ -1175,6 +1191,9 @@
         // Delegate change event for product checkboxes in defaults mode
         document.addEventListener('change', function (e) {
             if (e.target.classList.contains('wbv-select-product-default')) {
+                console.log('Checkbox changed:', e.target.checked, 'Product ID:', e.target.value);
+                console.log('Current mode:', currentMode);
+                console.log('lastProducts exists:', !!lastProducts);
                 updateDefaultsSelector();
             }
         });
