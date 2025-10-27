@@ -4,7 +4,7 @@
  * Plugin Name: Woo Bulk Variation Pricer
  * Plugin URI:  https://example.com/
  * Description: Search products and bulk-increase variation prices (preview, background processing and undo support).
- * Version:     0.1.0
+ * Version:     0.2.0
  * Author:      Michael Akinwumi
  * Author URI:  https://michaelakinwumi.com
  * Text Domain: woo-bulk-variation-pricer
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('WBVPRICER_VERSION', '0.1.2');
+define('WBVPRICER_VERSION', '0.2.0');
 define('WBVPRICER_PLUGIN_FILE', __FILE__);
 define('WBVPRICER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WBVPRICER_PLUGIN_URL', plugin_dir_url(__FILE__));
