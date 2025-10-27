@@ -24,32 +24,40 @@
         container.innerHTML = '';
         if (!products || products.length === 0) {
             container.innerHTML = '<p>No variable products found</p>';
+            // Clear attributes panel when no products
+            const attributesDiv = qs('#wbv-defaults-attributes');
+            if (attributesDiv) {
+                attributesDiv.innerHTML = '<p style="color:#999; font-style:italic;">Search for products first to see available attributes.</p>';
+            }
             return;
         }
+
+        console.log('Rendering', products.length, 'products for defaults');
 
         products.forEach(product => {
             const wrap = document.createElement('div');
             wrap.className = 'wbv-product wbv-product-defaults';
             wrap.dataset.productId = product.product_id;
             wrap.style.marginBottom = '1.25rem';
-            wrap.style.padding = '8px 12px';
+            wrap.style.padding = '12px';
             wrap.style.background = '#fff';
             wrap.style.border = '1px solid #e5e5e5';
+            wrap.style.borderRadius = '4px';
 
             const header = document.createElement('div');
             header.className = 'wbv-product-header';
+            header.style.marginBottom = '10px';
 
             const productCheckbox = document.createElement('input');
             productCheckbox.type = 'checkbox';
             productCheckbox.className = 'wbv-select-product-default';
             productCheckbox.dataset.productId = product.product_id;
+            productCheckbox.style.marginRight = '10px';
             header.appendChild(productCheckbox);
 
-            const title = document.createElement('h3');
+            const title = document.createElement('strong');
             title.textContent = product.title + (product.sku ? ' — ' + product.sku : '');
-            title.style.display = 'inline-block';
-            title.style.marginLeft = '8px';
-            title.style.fontSize = '14px';
+            title.style.fontSize = '15px';
             header.appendChild(title);
 
             wrap.appendChild(header);
@@ -59,7 +67,7 @@
             defaultsDiv.className = 'wbv-current-defaults';
             defaultsDiv.style.padding = '10px';
             defaultsDiv.style.background = '#f9f9f9';
-            defaultsDiv.style.marginTop = '10px';
+            defaultsDiv.style.borderRadius = '3px';
 
             const defaultsLabel = document.createElement('strong');
             defaultsLabel.textContent = 'Current Defaults: ';
@@ -85,21 +93,32 @@
         });
 
         // Show the defaults selector panel automatically with all available attributes
+        console.log('Calling showDefaultsSelector after rendering products');
         showDefaultsSelector();
     }
 
     function showDefaultsSelector() {
+        console.log('showDefaultsSelector called');
         const attributesDiv = qs('#wbv-defaults-attributes');
 
-        if (!attributesDiv || !lastProducts) return;
+        console.log('attributesDiv:', attributesDiv);
+        console.log('lastProducts count:', lastProducts ? lastProducts.length : 0);
+
+        if (!attributesDiv || !lastProducts || lastProducts.length === 0) {
+            console.warn('Cannot show selector - missing elements or no products');
+            return;
+        }
 
         // Collect ALL attributes from all products
         const attributesMap = new Map();
 
         lastProducts.forEach(product => {
+            console.log('Processing product:', product.product_id, product.title);
             if (product && product.variations) {
+                console.log('  - has', product.variations.length, 'variations');
                 product.variations.forEach(v => {
                     if (v.attributes && Array.isArray(v.attributes)) {
+                        console.log('    - variation has', v.attributes.length, 'attributes');
                         v.attributes.forEach(attr => {
                             if (!attributesMap.has(attr.key)) {
                                 attributesMap.set(attr.key, {
@@ -115,6 +134,8 @@
             }
         });
 
+        console.log('Total unique attributes found:', attributesMap.size);
+
         // Render attribute selectors
         attributesDiv.innerHTML = '';
 
@@ -124,8 +145,12 @@
         }
 
         attributesMap.forEach((attrData, attrKey) => {
+            console.log('Creating selector for attribute:', attrKey, 'with', attrData.values.size, 'values');
+
             const attrDiv = document.createElement('div');
-            attrDiv.style.marginBottom = '10px';
+            attrDiv.style.marginBottom = '15px';
+            attrDiv.style.display = 'flex';
+            attrDiv.style.alignItems = 'center';
 
             const label = document.createElement('label');
             label.textContent = attrData.label + ': ';
@@ -136,7 +161,8 @@
 
             const select = document.createElement('select');
             select.dataset.attributeKey = attrKey;
-            select.style.minWidth = '200px';
+            select.style.minWidth = '250px';
+            select.style.minHeight = '34px';
 
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
@@ -153,6 +179,8 @@
             attrDiv.appendChild(select);
             attributesDiv.appendChild(attrDiv);
         });
+
+        console.log('Attribute selectors rendered successfully');
     }
 
     function updateSelectionCount() {
@@ -366,13 +394,20 @@
 
         const q = search.value.trim();
         const perPage = per.value;
+
+        console.log('Searching for:', q, 'per page:', perPage, 'page:', page);
+
         results.innerHTML = '<p>Searching…</p>';
 
         try {
             const data = await performSearch(q, perPage, page);
+            console.log('Search response:', data);
+            console.log('Products returned:', data.products ? data.products.length : 0);
+
             lastProducts = data.products || [];
             renderProductsForDefaults(results, lastProducts);
         } catch (e) {
+            console.error('Search error:', e);
             results.innerHTML = `<p style="color:#d63638;">${e.message}</p>`;
         }
     }
