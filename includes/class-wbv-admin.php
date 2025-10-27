@@ -50,6 +50,25 @@ class WBV_Admin
             </div>
 
             <div id="wbv-app">
+                <!-- Instructions for Default Attributes Mode -->
+                <div id="wbv-defaults-instructions" style="display:none; margin-bottom:1rem; padding:15px; background:#e7f3ff; border-left:4px solid #2271b1; border-radius:4px;">
+                    <h3 style="margin-top:0; color:#2271b1;">
+                        <span class="dashicons dashicons-info" style="font-size:20px; vertical-align:middle;"></span>
+                        <?php echo esc_html__('How to Set Default Attributes', 'woo-bulk-variation-pricer'); ?>
+                    </h3>
+                    <ol style="margin:10px 0; padding-left:20px;">
+                        <li><strong><?php echo esc_html__('Search for products', 'woo-bulk-variation-pricer'); ?></strong> - <?php echo esc_html__('Use the search box below to find variable products', 'woo-bulk-variation-pricer'); ?></li>
+                        <li><strong><?php echo esc_html__('Select products', 'woo-bulk-variation-pricer'); ?></strong> - <?php echo esc_html__('Check the boxes next to products you want to update', 'woo-bulk-variation-pricer'); ?></li>
+                        <li><strong><?php echo esc_html__('Choose defaults', 'woo-bulk-variation-pricer'); ?></strong> - <?php echo esc_html__('A panel will appear where you can select default attribute values', 'woo-bulk-variation-pricer'); ?></li>
+                        <li><strong><?php echo esc_html__('Preview & Apply', 'woo-bulk-variation-pricer'); ?></strong> - <?php echo esc_html__('Preview changes, then click "Apply Changes" to update all selected products', 'woo-bulk-variation-pricer'); ?></li>
+                    </ol>
+                    <p style="margin-bottom:0; color:#135e96;">
+                        <span class="dashicons dashicons-lightbulb" style="vertical-align:middle;"></span>
+                        <strong><?php echo esc_html__('Tip:', 'woo-bulk-variation-pricer'); ?></strong>
+                        <?php echo esc_html__('Default attributes control which variation is pre-selected when customers view the product page.', 'woo-bulk-variation-pricer'); ?>
+                    </p>
+                </div>
+
                 <div id="wbv-toolbar">
                     <label style="margin-right:1rem;"><input id="wbv-select-all-visible" type="checkbox" /> <?php echo esc_html__('Select all visible', 'woo-bulk-variation-pricer'); ?></label>
                     <input id="wbv-search" type="search" placeholder="<?php echo esc_attr__('Search products or SKU', 'woo-bulk-variation-pricer'); ?>" style="width:24%;" />

@@ -779,6 +779,7 @@
         const tabDefaults = qs('#wbv-tab-defaults');
         const priceControls = qs('#wbv-toolbar');
         const defaultsControls = qs('#wbv-defaults-controls');
+        const defaultsInstructions = qs('#wbv-defaults-instructions');
 
         if (!tabPrices || !tabDefaults) return;
 
@@ -789,6 +790,7 @@
             tabDefaults.classList.remove('nav-tab-active');
             if (priceControls) priceControls.style.display = '';
             if (defaultsControls) defaultsControls.style.display = 'none';
+            if (defaultsInstructions) defaultsInstructions.style.display = 'none';
         });
 
         tabDefaults.addEventListener('click', function (e) {
@@ -798,6 +800,13 @@
             tabPrices.classList.remove('nav-tab-active');
             if (priceControls) priceControls.style.display = 'none';
             if (defaultsControls) defaultsControls.style.display = '';
+            if (defaultsInstructions) defaultsInstructions.style.display = '';
+
+            // Clear any existing results and show fresh instructions
+            const results = qs('#wbv-results');
+            if (results && !results.querySelector('.wbv-product')) {
+                results.innerHTML = '<div style="text-align:center; padding:40px; color:#666;"><p style="font-size:16px;">👆 <strong>Start by searching for products above</strong></p><p>Use the search box to find variable products, then select them to set default attributes.</p></div>';
+            }
         });
     }
 
