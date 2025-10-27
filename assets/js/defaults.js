@@ -259,12 +259,17 @@
 
     async function handleDefaultsApply() {
         const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+        console.log('Selected checkboxes:', selected);
+        console.log('Selected count:', selected.length);
+
         if (selected.length === 0) {
             alert('Please select at least one product');
             return;
         }
 
         const defaults = collectDefaultsFromUI();
+        console.log('Defaults from UI:', defaults);
+
         if (Object.keys(defaults).length === 0) {
             alert('Please select at least one default attribute value');
             return;
@@ -273,9 +278,21 @@
         const operationLabel = qs('#wbv-defaults-operation-label') ? qs('#wbv-defaults-operation-label').value.trim() : '';
         const product_ids = selected.map(cb => parseInt(cb.dataset.productId));
 
+        console.log('Product IDs being sent:', product_ids);
+        console.log('Defaults being sent:', defaults);
+
         if (!confirm(`Apply default attributes to ${product_ids.length} product(s)?`)) {
             return;
         }
+
+        const requestBody = {
+            product_ids: product_ids,
+            defaults: defaults,
+            dry_run: false,
+            operation_label: operationLabel
+        };
+
+        console.log('Full request body:', JSON.stringify(requestBody, null, 2));
 
         try {
             const res = await fetch(`${restRoot}/set-defaults`, {
@@ -284,15 +301,11 @@
                     'Content-Type': 'application/json',
                     'X-WP-Nonce': nonce
                 },
-                body: JSON.stringify({
-                    product_ids: product_ids,
-                    defaults: defaults,
-                    dry_run: false,
-                    operation_label: operationLabel
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const data = await res.json();
+            console.log('Response from server:', data);
 
             if (!res.ok) {
                 throw new Error(data.message || 'Update failed');
@@ -307,6 +320,7 @@
             // Refresh search
             doSearch(1);
         } catch (e) {
+            console.error('Update error:', e);
             alert('Update error: ' + e.message);
         }
     }
