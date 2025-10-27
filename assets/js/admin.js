@@ -1,271 +1,271 @@
 /* Placeholder admin script for WBV pricer */
 (function () {
-    if ( typeof window === 'undefined' ) return;
+    if (typeof window === 'undefined') return;
 
-    const restRoot = ( typeof wbvPricer !== 'undefined' && wbvPricer.rest_root ) ? wbvPricer.rest_root : '/wp-json/wbvpricer/v1';
-    const nonce = ( typeof wbvPricer !== 'undefined' && wbvPricer.nonce ) ? wbvPricer.nonce : '';
+    const restRoot = (typeof wbvPricer !== 'undefined' && wbvPricer.rest_root) ? wbvPricer.rest_root : '/wp-json/wbvpricer/v1';
+    const nonce = (typeof wbvPricer !== 'undefined' && wbvPricer.nonce) ? wbvPricer.nonce : '';
 
-    function qs( selector ) { return document.querySelector( selector ); }
+    function qs(selector) { return document.querySelector(selector); }
 
-    function renderProducts( container, products ) {
+    function renderProducts(container, products) {
         container.innerHTML = '';
-        if ( ! products || products.length === 0 ) {
-            const p = document.createElement( 'p' );
+        if (!products || products.length === 0) {
+            const p = document.createElement('p');
             p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noProducts) ? wbvPricer.i18n.noProducts : 'No products found';
-            container.appendChild( p );
+            container.appendChild(p);
             return;
         }
-        products.forEach( product => {
-            const wrap = document.createElement( 'div' );
+        products.forEach(product => {
+            const wrap = document.createElement('div');
             wrap.className = 'wbv-product';
             wrap.dataset.productId = product.product_id;
 
-            const header = document.createElement( 'div' );
+            const header = document.createElement('div');
             header.className = 'wbv-product-header';
-            const productCheckbox = document.createElement( 'input' );
+            const productCheckbox = document.createElement('input');
             productCheckbox.type = 'checkbox';
             productCheckbox.className = 'wbv-select-product';
             productCheckbox.dataset.productId = product.product_id;
-            header.appendChild( productCheckbox );
+            header.appendChild(productCheckbox);
 
-            const title = document.createElement( 'h3' );
-            title.textContent = product.title + ( product.sku ? ' — ' + product.sku : '' );
-            header.appendChild( title );
+            const title = document.createElement('h3');
+            title.textContent = product.title + (product.sku ? ' — ' + product.sku : '');
+            header.appendChild(title);
 
-            wrap.appendChild( header );
+            wrap.appendChild(header);
 
-            const table = document.createElement( 'table' );
+            const table = document.createElement('table');
             table.className = 'wbv-variations';
-            const thead = document.createElement( 'thead' );
+            const thead = document.createElement('thead');
             thead.innerHTML = '<tr><th></th><th>SKU</th><th>Attributes</th><th>Regular</th><th>Sale</th></tr>';
-            table.appendChild( thead );
-            const tbody = document.createElement( 'tbody' );
+            table.appendChild(thead);
+            const tbody = document.createElement('tbody');
 
-            product.variations.forEach( v => {
-                const tr = document.createElement( 'tr' );
+            product.variations.forEach(v => {
+                const tr = document.createElement('tr');
 
-                const tdCheck = document.createElement( 'td' );
-                const cb = document.createElement( 'input' );
+                const tdCheck = document.createElement('td');
+                const cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.className = 'wbv-select-variation';
                 cb.dataset.vid = v.variation_id;
                 cb.dataset.sku = v.sku || '';
                 const attrsText = v.attributes.map(a => a.label + ': ' + a.value).join(', ');
-                cb.dataset.attrs = encodeURIComponent( attrsText );
+                cb.dataset.attrs = encodeURIComponent(attrsText);
                 cb.dataset.regular = v.regular_price || '';
                 cb.dataset.sale = v.sale_price || '';
                 cb.dataset.productId = product.product_id;
-                tdCheck.appendChild( cb );
-                tr.appendChild( tdCheck );
+                tdCheck.appendChild(cb);
+                tr.appendChild(tdCheck);
 
-                const tdSku = document.createElement( 'td' ); tdSku.textContent = v.sku || ''; tr.appendChild( tdSku );
-                const tdAttrs = document.createElement( 'td' ); tdAttrs.textContent = attrsText; tr.appendChild( tdAttrs );
-                const tdRegular = document.createElement( 'td' ); tdRegular.textContent = v.regular_price || ''; tr.appendChild( tdRegular );
-                const tdSale = document.createElement( 'td' ); tdSale.textContent = v.sale_price || ''; tr.appendChild( tdSale );
+                const tdSku = document.createElement('td'); tdSku.textContent = v.sku || ''; tr.appendChild(tdSku);
+                const tdAttrs = document.createElement('td'); tdAttrs.textContent = attrsText; tr.appendChild(tdAttrs);
+                const tdRegular = document.createElement('td'); tdRegular.textContent = v.regular_price || ''; tr.appendChild(tdRegular);
+                const tdSale = document.createElement('td'); tdSale.textContent = v.sale_price || ''; tr.appendChild(tdSale);
 
-                tbody.appendChild( tr );
-            } );
+                tbody.appendChild(tr);
+            });
 
-            table.appendChild( tbody );
-            wrap.appendChild( table );
-            container.appendChild( wrap );
-        } );
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            container.appendChild(wrap);
+        });
     }
 
-    function setupAttributeSelectChangeHandler( sel, valSel ) {
-        sel.addEventListener( 'change', function () {
-            const selected = Array.from( sel.selectedOptions ).map( o => o.value ).filter( Boolean );
+    function setupAttributeSelectChangeHandler(sel, valSel) {
+        sel.addEventListener('change', function () {
+            const selected = Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean);
             valSel.innerHTML = '';
-            if ( ! selected.length ) {
+            if (!selected.length) {
                 valSel.disabled = true;
-                const o = document.createElement( 'option' ); o.value = ''; o.textContent = 'All values'; o.disabled = true; valSel.appendChild( o );
+                const o = document.createElement('option'); o.value = ''; o.textContent = 'All values'; o.disabled = true; valSel.appendChild(o);
                 renderActiveFilters();
                 return;
             }
 
             // Build optgroups for each selected attribute
-            selected.forEach( tax => {
+            selected.forEach(tax => {
                 // prefer canonical REST attribute list
-                const found = wbvAttributes.find( x => ( x.taxonomy === tax || x.attribute_name === tax ) );
-                if ( found ) {
-                    const group = document.createElement( 'optgroup' ); group.label = found.label || found.attribute_name;
-                    if ( found.terms && found.terms.length ) {
-                        found.terms.forEach( t => {
-                            const o = document.createElement( 'option' );
+                const found = wbvAttributes.find(x => (x.taxonomy === tax || x.attribute_name === tax));
+                if (found) {
+                    const group = document.createElement('optgroup'); group.label = found.label || found.attribute_name;
+                    if (found.terms && found.terms.length) {
+                        found.terms.forEach(t => {
+                            const o = document.createElement('option');
                             o.value = (found.taxonomy || found.attribute_name) + '|' + t.slug; // encode pair
                             o.textContent = t.name;
-                            group.appendChild( o );
-                        } );
+                            group.appendChild(o);
+                        });
                     }
-                    valSel.appendChild( group );
+                    valSel.appendChild(group);
                     return;
                 }
 
                 // fallback created from products
-                if ( wbvAttributeFallbackMap[ tax ] ) {
-                    const group = document.createElement( 'optgroup' ); group.label = wbvAttributeFallbackMap[ tax ].label || tax;
-                    Array.from( wbvAttributeFallbackMap[ tax ].values ).forEach( v => {
-                        const o = document.createElement( 'option' );
+                if (wbvAttributeFallbackMap[tax]) {
+                    const group = document.createElement('optgroup'); group.label = wbvAttributeFallbackMap[tax].label || tax;
+                    Array.from(wbvAttributeFallbackMap[tax].values).forEach(v => {
+                        const o = document.createElement('option');
                         // pass display value; server will resolve by name if needed
                         o.value = tax + '|' + v;
                         o.textContent = v;
-                        group.appendChild( o );
-                    } );
-                    valSel.appendChild( group );
+                        group.appendChild(o);
+                    });
+                    valSel.appendChild(group);
                     return;
                 }
 
                 // No values for this taxonomy
-                const o = document.createElement( 'option' ); o.value = ''; o.textContent = 'No values'; o.disabled = true; valSel.appendChild( o );
-            } );
+                const o = document.createElement('option'); o.value = ''; o.textContent = 'No values'; o.disabled = true; valSel.appendChild(o);
+            });
 
             valSel.disabled = false;
-            if ( qs( '#wbv-attribute-value-text' ) ) { qs( '#wbv-attribute-value-text' ).disabled = false; }
+            if (qs('#wbv-attribute-value-text')) { qs('#wbv-attribute-value-text').disabled = false; }
             renderActiveFilters();
-        } );
+        });
     }
 
-    function populateAttributeSelectorsFromProducts( products ) {
-        if ( ! Array.isArray( products ) ) return;
-        const sel = qs( '#wbv-attribute' );
-        const valSel = qs( '#wbv-attribute-value' );
-        if ( ! sel ) return;
+    function populateAttributeSelectorsFromProducts(products) {
+        if (!Array.isArray(products)) return;
+        const sel = qs('#wbv-attribute');
+        const valSel = qs('#wbv-attribute-value');
+        if (!sel) return;
 
         // build map taxonomy -> { label, values: Set }
         wbvAttributeFallbackMap = {};
-        products.forEach( p => {
-            if ( ! p.variations ) return;
-            p.variations.forEach( v => {
-                if ( ! v.attributes ) return;
-                v.attributes.forEach( a => {
+        products.forEach(p => {
+            if (!p.variations) return;
+            p.variations.forEach(v => {
+                if (!v.attributes) return;
+                v.attributes.forEach(a => {
                     const tax = a.key || ''; const label = a.label || tax; const val = a.value || '';
-                    if ( ! tax || ! val ) return;
-                    if ( ! wbvAttributeFallbackMap[ tax ] ) wbvAttributeFallbackMap[ tax ] = { label: label, values: new Set() };
-                    wbvAttributeFallbackMap[ tax ].values.add( val );
-                } );
-            } );
-        } );
+                    if (!tax || !val) return;
+                    if (!wbvAttributeFallbackMap[tax]) wbvAttributeFallbackMap[tax] = { label: label, values: new Set() };
+                    wbvAttributeFallbackMap[tax].values.add(val);
+                });
+            });
+        });
 
         // populate select with detected taxonomies
         sel.innerHTML = '<option value="" disabled>All attributes</option>';
-        Object.keys( wbvAttributeFallbackMap ).forEach( tax => {
-            const opt = document.createElement( 'option' ); opt.value = tax; opt.textContent = wbvAttributeFallbackMap[ tax ].label || tax; sel.appendChild( opt );
-        } );
+        Object.keys(wbvAttributeFallbackMap).forEach(tax => {
+            const opt = document.createElement('option'); opt.value = tax; opt.textContent = wbvAttributeFallbackMap[tax].label || tax; sel.appendChild(opt);
+        });
 
         // attach change handler
-        setupAttributeSelectChangeHandler( sel, valSel );
+        setupAttributeSelectChangeHandler(sel, valSel);
     }
 
-    async function performSearch( q, per_page, page, attributePairs, attributeOp ) {
+    async function performSearch(q, per_page, page, attributePairs, attributeOp) {
         const params = new URLSearchParams();
-        if ( q ) params.append( 'q', q );
-        params.append( 'per_page', per_page );
-        params.append( 'page', page );
-        if ( attributeOp ) params.append( 'attribute_operator', attributeOp );
-        if ( Array.isArray( attributePairs ) ) {
-            attributePairs.forEach( p => { params.append( 'attribute_pairs[]', p ); } );
+        if (q) params.append('q', q);
+        params.append('per_page', per_page);
+        params.append('page', page);
+        if (attributeOp) params.append('attribute_operator', attributeOp);
+        if (Array.isArray(attributePairs)) {
+            attributePairs.forEach(p => { params.append('attribute_pairs[]', p); });
         }
-        const url = `${restRoot}/search?${ params.toString() }`;
-        const res = await fetch( url, {
+        const url = `${restRoot}/search?${params.toString()}`;
+        const res = await fetch(url, {
             headers: {
                 'X-WP-Nonce': nonce,
             }
-        } );
+        });
 
-        if ( ! res.ok ) {
-            const err = await res.json().catch( () => ({ message: 'Network error' }) );
-            throw new Error( err.message || 'REST error' );
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(err.message || 'REST error');
         }
 
         return res.json();
     }
 
     function setupHandlers() {
-        const btn = qs( '#wbv-search-btn' );
-        const search = qs( '#wbv-search' );
-        const per = qs( '#wbv-per-page' );
-        const results = qs( '#wbv-results' );
+        const btn = qs('#wbv-search-btn');
+        const search = qs('#wbv-search');
+        const per = qs('#wbv-per-page');
+        const results = qs('#wbv-results');
 
-    let currentPage = 1;
+        let currentPage = 1;
 
-        async function doSearch( page ) {
+        async function doSearch(page) {
             const q = search.value.trim();
             const perPage = per.value;
-            results.innerHTML = `<p>${ (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.searching) ? wbvPricer.i18n.searching : 'Searching…' }</p>`;
+            results.innerHTML = `<p>${(wbvPricer && wbvPricer.i18n && wbvPricer.i18n.searching) ? wbvPricer.i18n.searching : 'Searching…'}</p>`;
             try {
-                const attributePairs = qs( '#wbv-attribute-value' ) ? Array.from( qs( '#wbv-attribute-value' ).selectedOptions ).map( o => o.value ).filter( Boolean ) : [];
-                const attributeText = qs( '#wbv-attribute-value-text' ) ? qs( '#wbv-attribute-value-text' ).value.trim() : '';
-                const attributeOp = qs( '#wbv-attribute-op' ) ? qs( '#wbv-attribute-op' ).value : 'and';
+                const attributePairs = qs('#wbv-attribute-value') ? Array.from(qs('#wbv-attribute-value').selectedOptions).map(o => o.value).filter(Boolean) : [];
+                const attributeText = qs('#wbv-attribute-value-text') ? qs('#wbv-attribute-value-text').value.trim() : '';
+                const attributeOp = qs('#wbv-attribute-op') ? qs('#wbv-attribute-op').value : 'and';
                 // If text provided, add taxonomy|text for each selected taxonomy
-                if ( attributeText ) {
-                    const selectedTax = qs( '#wbv-attribute' ) ? Array.from( qs( '#wbv-attribute' ).selectedOptions ).map( o => o.value ).filter( Boolean ) : [];
-                    if ( selectedTax.length ) {
-                        selectedTax.forEach( t => {
-                            attributePairs.push( t + '|' + attributeText );
-                        } );
+                if (attributeText) {
+                    const selectedTax = qs('#wbv-attribute') ? Array.from(qs('#wbv-attribute').selectedOptions).map(o => o.value).filter(Boolean) : [];
+                    if (selectedTax.length) {
+                        selectedTax.forEach(t => {
+                            attributePairs.push(t + '|' + attributeText);
+                        });
                     } else {
                         // No taxonomy selected: search across all known attributes
-                        ( wbvAttributes || [] ).forEach( a => {
+                        (wbvAttributes || []).forEach(a => {
                             const tax = a.taxonomy || a.attribute_name;
-                            if ( tax ) attributePairs.push( tax + '|' + attributeText );
-                        } );
+                            if (tax) attributePairs.push(tax + '|' + attributeText);
+                        });
                     }
                 }
-                const data = await performSearch( q, perPage, page, attributePairs, attributeOp );
+                const data = await performSearch(q, perPage, page, attributePairs, attributeOp);
                 lastProducts = data.products || [];
-                renderProducts( results, lastProducts );
+                renderProducts(results, lastProducts);
                 // After rendering products re-attach any event handlers for checkboxes
                 attachProductHandlers();
                 // If the attributes REST endpoint produced no attributes, populate selects from products
-                if ( ( ! wbvAttributes || wbvAttributes.length === 0 ) && lastProducts && lastProducts.length ) {
-                    populateAttributeSelectorsFromProducts( lastProducts );
+                if ((!wbvAttributes || wbvAttributes.length === 0) && lastProducts && lastProducts.length) {
+                    populateAttributeSelectorsFromProducts(lastProducts);
                 }
                 // Re-attempt fetching attributes after search completes so any REST errors appear in DevTools
-                if ( ! wbvAttributes || wbvAttributes.length === 0 ) {
+                if (!wbvAttributes || wbvAttributes.length === 0) {
                     loadAttributes();
                 }
-            } catch ( e ) {
-                results.innerHTML = `<p class="wbv-error">${ e.message }</p>`;
+            } catch (e) {
+                results.innerHTML = `<p class="wbv-error">${e.message}</p>`;
             }
         }
 
-        btn.addEventListener( 'click', function (e) { e.preventDefault(); currentPage = 1; doSearch( currentPage ); } );
-        search.addEventListener( 'keydown', function (e) { if ( e.key === 'Enter' ) { e.preventDefault(); currentPage = 1; doSearch( currentPage ); } } );
+        btn.addEventListener('click', function (e) { e.preventDefault(); currentPage = 1; doSearch(currentPage); });
+        search.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); currentPage = 1; doSearch(currentPage); } });
 
-        const previewBtn = qs( '#wbv-preview-btn' );
-        const applyBtn = qs( '#wbv-apply-btn' );
-        const exportBtn = qs( '#wbv-export-csv' );
+        const previewBtn = qs('#wbv-preview-btn');
+        const applyBtn = qs('#wbv-apply-btn');
+        const exportBtn = qs('#wbv-export-csv');
 
-        previewBtn.addEventListener( 'click', function ( e ) {
+        previewBtn.addEventListener('click', function (e) {
             e.preventDefault();
             handlePreview();
-        } );
+        });
 
-        applyBtn.addEventListener( 'click', function ( e ) {
+        applyBtn.addEventListener('click', function (e) {
             e.preventDefault();
             handleApply();
-        } );
+        });
 
-        exportBtn.addEventListener( 'click', function ( e ) {
+        exportBtn.addEventListener('click', function (e) {
             e.preventDefault();
             handleExportCSV();
-        } );
+        });
 
         // Global select-all visible checkbox (attach once)
-        const globalSelect = qs( '#wbv-select-all-visible' );
-        if ( globalSelect ) {
-            globalSelect.addEventListener( 'change', function () {
+        const globalSelect = qs('#wbv-select-all-visible');
+        if (globalSelect) {
+            globalSelect.addEventListener('change', function () {
                 const checked = this.checked;
-                document.querySelectorAll( '.wbv-select-variation' ).forEach( vcb => vcb.checked = checked );
-                document.querySelectorAll( '.wbv-select-product' ).forEach( pcb => pcb.checked = checked );
-            } );
+                document.querySelectorAll('.wbv-select-variation').forEach(vcb => vcb.checked = checked);
+                document.querySelectorAll('.wbv-select-product').forEach(pcb => pcb.checked = checked);
+            });
         }
 
         // Attempt to load attributes first (so REST errors surface early), then operations and initial search
         loadAttributes();
         loadOperations();
         // initial empty search
-        doSearch( currentPage );
+        doSearch(currentPage);
     }
 
     // Cache attributes fetched from server
@@ -277,33 +277,33 @@
     // How many times we've attempted to fetch attributes from REST
     let attributeFetchAttempts = 0;
     async function loadAttributes() {
-        const sel = qs( '#wbv-attribute' );
-        let valSel = qs( '#wbv-attribute-value' );
-        if ( ! sel ) {
-            console.debug( 'WBV: attribute select not found in DOM; aborting loadAttributes' );
+        const sel = qs('#wbv-attribute');
+        let valSel = qs('#wbv-attribute-value');
+        if (!sel) {
+            console.debug('WBV: attribute select not found in DOM; aborting loadAttributes');
             return;
         }
         // If value select is missing, create it next to attribute select so behavior is consistent
-        if ( ! valSel ) {
-            valSel = document.createElement( 'select' );
+        if (!valSel) {
+            valSel = document.createElement('select');
             valSel.id = 'wbv-attribute-value';
             valSel.multiple = true;
             valSel.disabled = true;
             valSel.size = 3;
-            sel.parentNode.insertBefore( valSel, sel.nextSibling );
-            console.debug( 'WBV: created missing attribute value select element' );
+            sel.parentNode.insertBefore(valSel, sel.nextSibling);
+            console.debug('WBV: created missing attribute value select element');
         }
 
         try {
-            console.debug( 'WBV: fetching attributes from', `${restRoot}/attributes` );
-            const res = await fetch( `${restRoot}/attributes`, { headers: { 'X-WP-Nonce': nonce } } );
-            console.debug( 'WBV: attributes fetch status', res.status );
-            if ( ! res.ok ) {
-                console.warn( 'WBV: attributes fetch failed', res.status );
-                showAttributeFetchError( res.status );
+            console.debug('WBV: fetching attributes from', `${restRoot}/attributes`);
+            const res = await fetch(`${restRoot}/attributes`, { headers: { 'X-WP-Nonce': nonce } });
+            console.debug('WBV: attributes fetch status', res.status);
+            if (!res.ok) {
+                console.warn('WBV: attributes fetch failed', res.status);
+                showAttributeFetchError(res.status);
                 // Try to populate from last search results
-                if ( lastProducts && lastProducts.length ) {
-                    populateAttributeSelectorsFromProducts( lastProducts );
+                if (lastProducts && lastProducts.length) {
+                    populateAttributeSelectorsFromProducts(lastProducts);
                 }
                 return;
             }
@@ -311,464 +311,843 @@
             wbvAttributes = json.attributes || [];
 
             // populate attribute select
-            if ( wbvAttributes.length ) {
+            if (wbvAttributes.length) {
                 sel.innerHTML = '<option value="" disabled>All attributes</option>';
-                wbvAttributes.forEach( a => {
-                    const opt = document.createElement( 'option' );
+                wbvAttributes.forEach(a => {
+                    const opt = document.createElement('option');
                     opt.value = a.taxonomy || a.attribute_name;
                     opt.textContent = a.label || a.attribute_name;
-                    sel.appendChild( opt );
-                } );
+                    sel.appendChild(opt);
+                });
             } else {
                 // No attributes from REST: fallback to products
-                if ( lastProducts && lastProducts.length ) {
-                    populateAttributeSelectorsFromProducts( lastProducts );
+                if (lastProducts && lastProducts.length) {
+                    populateAttributeSelectorsFromProducts(lastProducts);
                 } else {
                     sel.innerHTML = '<option value="" disabled>No attributes</option>';
                 }
             }
 
-            setupAttributeSelectChangeHandler( sel, valSel );
-        } catch ( e ) {
+            setupAttributeSelectChangeHandler(sel, valSel);
+        } catch (e) {
             // ignore and try fallback
-            console.error( 'WBV: attributes fetch exception', e );
-            showAttributeFetchError( 0 );
-            if ( lastProducts && lastProducts.length ) {
-                populateAttributeSelectorsFromProducts( lastProducts );
+            console.error('WBV: attributes fetch exception', e);
+            showAttributeFetchError(0);
+            if (lastProducts && lastProducts.length) {
+                populateAttributeSelectorsFromProducts(lastProducts);
             }
         }
     }
 
-    function showAttributeFetchError( status ) {
-        const errEl = qs( '#wbv-attribute-error' );
-        if ( ! errEl ) return;
+    function showAttributeFetchError(status) {
+        const errEl = qs('#wbv-attribute-error');
+        if (!errEl) return;
         let msg = wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchFailed ? wbvPricer.i18n.attributesFetchFailed : 'Could not fetch attributes.';
-        if ( status === 403 && wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchForbidden ) {
+        if (status === 403 && wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchForbidden) {
             msg = wbvPricer.i18n.attributesFetchForbidden;
-        } else if ( status >= 500 && wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchServerError ) {
-            msg = wbvPricer.i18n.attributesFetchServerError.replace( '%d', status );
+        } else if (status >= 500 && wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchServerError) {
+            msg = wbvPricer.i18n.attributesFetchServerError.replace('%d', status);
         }
 
         errEl.innerHTML = '';
-        const span = document.createElement( 'span' ); span.textContent = msg; span.style.marginRight = '0.5rem'; errEl.appendChild( span );
-        const retry = document.createElement( 'button' ); retry.className = 'button'; retry.textContent = ( wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchRetry ) ? wbvPricer.i18n.attributesFetchRetry : 'Retry';
-        retry.addEventListener( 'click', function ( e ) { e.preventDefault(); errEl.innerHTML = ''; loadAttributes(); } );
-        errEl.appendChild( retry );
+        const span = document.createElement('span'); span.textContent = msg; span.style.marginRight = '0.5rem'; errEl.appendChild(span);
+        const retry = document.createElement('button'); retry.className = 'button'; retry.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.attributesFetchRetry) ? wbvPricer.i18n.attributesFetchRetry : 'Retry';
+        retry.addEventListener('click', function (e) { e.preventDefault(); errEl.innerHTML = ''; loadAttributes(); });
+        errEl.appendChild(retry);
         // Show admin notice (non-intrusive)
-        showAdminNotice( msg );
+        showAdminNotice(msg);
     }
 
-    function showAdminNotice( message ) {
+    function showAdminNotice(message) {
         // Create a small non-blocking admin notice at the top of the page
         try {
-            const container = document.querySelector( '#wpcontent' ) || document.body;
-            const n = document.createElement( 'div' );
+            const container = document.querySelector('#wpcontent') || document.body;
+            const n = document.createElement('div');
             n.className = 'notice notice-warning inline wbv-attr-notice';
             n.style.marginBottom = '0.5rem';
             n.textContent = message;
             // add small dismiss button
-            const btn = document.createElement( 'button' ); btn.className = 'notice-dismiss'; btn.type = 'button'; btn.addEventListener( 'click', function () { n.remove(); } );
-            n.appendChild( btn );
+            const btn = document.createElement('button'); btn.className = 'notice-dismiss'; btn.type = 'button'; btn.addEventListener('click', function () { n.remove(); });
+            n.appendChild(btn);
             // Insert before our app if present
-            const app = qs( '#wbv-app' );
-            if ( app && app.parentNode ) app.parentNode.insertBefore( n, app ); else container.insertBefore( n, container.firstChild );
+            const app = qs('#wbv-app');
+            if (app && app.parentNode) app.parentNode.insertBefore(n, app); else container.insertBefore(n, container.firstChild);
             // Remove after 10s
-            setTimeout( function () { if ( n.parentNode ) n.parentNode.removeChild( n ); }, 10000 );
-        } catch ( ex ) {
+            setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 10000);
+        } catch (ex) {
             // noop
         }
     }
 
     function renderActiveFilters() {
-        const container = qs( '#wbv-active-filters' );
-        if ( ! container ) return;
+        const container = qs('#wbv-active-filters');
+        if (!container) return;
 
-        const pairs = qs( '#wbv-attribute-value' ) ? Array.from( qs( '#wbv-attribute-value' ).selectedOptions ).map( o => o.value ).filter( Boolean ) : [];
-        const op = qs( '#wbv-attribute-op' ) ? qs( '#wbv-attribute-op' ).value : 'and';
+        const pairs = qs('#wbv-attribute-value') ? Array.from(qs('#wbv-attribute-value').selectedOptions).map(o => o.value).filter(Boolean) : [];
+        const op = qs('#wbv-attribute-op') ? qs('#wbv-attribute-op').value : 'and';
 
         container.innerHTML = '';
-        if ( ! pairs.length ) {
+        if (!pairs.length) {
             return;
         }
 
         // Group pairs by taxonomy for readable labels
         const groups = {};
-        pairs.forEach( p => {
-            const parts = p.split( '|' );
-            if ( parts.length !== 2 ) return;
+        pairs.forEach(p => {
+            const parts = p.split('|');
+            if (parts.length !== 2) return;
             const tax = parts[0]; const slug = parts[1];
-            if ( ! groups[tax] ) groups[tax] = [];
+            if (!groups[tax]) groups[tax] = [];
             // find term name via canonical attribute list or fallback map
             let termName = slug;
-            const foundAttr = wbvAttributes.find( a => ( a.taxonomy === tax || a.attribute_name === tax ) );
-            if ( foundAttr && foundAttr.terms ) {
-                const ft = foundAttr.terms.find( t => t.slug === slug || t.name === slug );
-                if ( ft ) termName = ft.name;
-            } else if ( wbvAttributeFallbackMap[ tax ] ) {
-                if ( wbvAttributeFallbackMap[ tax ].values.has( slug ) ) {
+            const foundAttr = wbvAttributes.find(a => (a.taxonomy === tax || a.attribute_name === tax));
+            if (foundAttr && foundAttr.terms) {
+                const ft = foundAttr.terms.find(t => t.slug === slug || t.name === slug);
+                if (ft) termName = ft.name;
+            } else if (wbvAttributeFallbackMap[tax]) {
+                if (wbvAttributeFallbackMap[tax].values.has(slug)) {
                     termName = slug;
                 }
             }
-            groups[tax].push( termName );
-        } );
+            groups[tax].push(termName);
+        });
 
         const frag = document.createDocumentFragment();
-        const span = document.createElement( 'span' ); span.textContent = 'Filters: '; frag.appendChild( span );
-        Object.keys( groups ).forEach( tax => {
-            const attrObj = wbvAttributes.find( a => ( a.taxonomy === tax || a.attribute_name === tax ) );
-            const label = ( attrObj && attrObj.label ) || ( wbvAttributeFallbackMap[ tax ] && wbvAttributeFallbackMap[ tax ].label ) || tax;
-            const s = document.createElement( 'strong' ); s.textContent = label + ': '; frag.appendChild( s );
-            const txt = document.createElement( 'span' ); txt.textContent = groups[tax].join( ', ' ) + ' '; frag.appendChild( txt );
-        } );
-        const opText = document.createElement( 'span' ); opText.textContent = `(${ op.toUpperCase() }) `; frag.appendChild( opText );
+        const span = document.createElement('span'); span.textContent = 'Filters: '; frag.appendChild(span);
+        Object.keys(groups).forEach(tax => {
+            const attrObj = wbvAttributes.find(a => (a.taxonomy === tax || a.attribute_name === tax));
+            const label = (attrObj && attrObj.label) || (wbvAttributeFallbackMap[tax] && wbvAttributeFallbackMap[tax].label) || tax;
+            const s = document.createElement('strong'); s.textContent = label + ': '; frag.appendChild(s);
+            const txt = document.createElement('span'); txt.textContent = groups[tax].join(', ') + ' '; frag.appendChild(txt);
+        });
+        const opText = document.createElement('span'); opText.textContent = `(${op.toUpperCase()}) `; frag.appendChild(opText);
 
-        const attributeText = qs( '#wbv-attribute-value-text' ) ? qs( '#wbv-attribute-value-text' ).value.trim() : '';
-        if ( attributeText ) {
-            const t = document.createElement( 'em' ); t.textContent = `Name contains: "${ attributeText }" `; frag.appendChild( t );
+        const attributeText = qs('#wbv-attribute-value-text') ? qs('#wbv-attribute-value-text').value.trim() : '';
+        if (attributeText) {
+            const t = document.createElement('em'); t.textContent = `Name contains: "${attributeText}" `; frag.appendChild(t);
         }
 
-        const clearBtn = document.createElement( 'button' ); clearBtn.className = 'button'; clearBtn.textContent = 'Clear filters';
-        clearBtn.addEventListener( 'click', function ( e ) {
+        const clearBtn = document.createElement('button'); clearBtn.className = 'button'; clearBtn.textContent = 'Clear filters';
+        clearBtn.addEventListener('click', function (e) {
             e.preventDefault();
             // reset selects
-            if ( qs( '#wbv-attribute' ) ) {
-                Array.from( qs( '#wbv-attribute' ).options ).forEach( o => o.selected = false );
+            if (qs('#wbv-attribute')) {
+                Array.from(qs('#wbv-attribute').options).forEach(o => o.selected = false);
             }
-            if ( qs( '#wbv-attribute-value' ) ) {
-                qs( '#wbv-attribute-value' ).innerHTML = '<option value="" disabled>All values</option>'; qs( '#wbv-attribute-value' ).disabled = true;
+            if (qs('#wbv-attribute-value')) {
+                qs('#wbv-attribute-value').innerHTML = '<option value="" disabled>All values</option>'; qs('#wbv-attribute-value').disabled = true;
             }
-                if ( qs( '#wbv-attribute-value-text' ) ) { qs( '#wbv-attribute-value-text' ).value = ''; qs( '#wbv-attribute-value-text' ).disabled = true; }
-            if ( qs( '#wbv-attribute-op' ) ) qs( '#wbv-attribute-op' ).value = 'and';
+            if (qs('#wbv-attribute-value-text')) { qs('#wbv-attribute-value-text').value = ''; qs('#wbv-attribute-value-text').disabled = true; }
+            if (qs('#wbv-attribute-op')) qs('#wbv-attribute-op').value = 'and';
             container.innerHTML = '';
-            doSearch( 1 );
-        } );
-        frag.appendChild( clearBtn );
+            doSearch(1);
+        });
+        frag.appendChild(clearBtn);
 
-        container.appendChild( frag );
+        container.appendChild(frag);
     }
 
     function handleExportCSV() {
         const selected = getSelectedVariationIds();
-        if ( selected.length === 0 ) {
-            alert( (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noSelection) ? wbvPricer.i18n.noSelection : 'No variations selected' );
+        if (selected.length === 0) {
+            alert((wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noSelection) ? wbvPricer.i18n.noSelection : 'No variations selected');
             return;
         }
 
         const rows = [];
-        document.querySelectorAll( '.wbv-select-variation:checked' ).forEach( cb => {
-            const vid = cb.getAttribute( 'data-vid' );
-            const sku = cb.getAttribute( 'data-sku' ) || '';
-            const attrs = decodeURIComponent( cb.getAttribute( 'data-attrs' ) || '' );
-            const regular = cb.getAttribute( 'data-regular' ) || '';
-            const sale = cb.getAttribute( 'data-sale' ) || '';
-            rows.push( [ vid, sku, attrs, regular, sale ] );
-        } );
+        document.querySelectorAll('.wbv-select-variation:checked').forEach(cb => {
+            const vid = cb.getAttribute('data-vid');
+            const sku = cb.getAttribute('data-sku') || '';
+            const attrs = decodeURIComponent(cb.getAttribute('data-attrs') || '');
+            const regular = cb.getAttribute('data-regular') || '';
+            const sale = cb.getAttribute('data-sale') || '';
+            rows.push([vid, sku, attrs, regular, sale]);
+        });
 
         let csv = 'variation_id,sku,attributes,regular_price,sale_price\n';
-        rows.forEach( r => {
-            csv += r.map( v => '"' + String( v ).replace( /"/g, '""' ) + '"' ).join( ',' ) + '\n';
-        } );
+        rows.forEach(r => {
+            csv += r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',') + '\n';
+        });
 
-        const blob = new Blob( [ csv ], { type: 'text/csv;charset=utf-8;' } );
-        const url = URL.createObjectURL( blob );
-        const a = document.createElement( 'a' );
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
         a.href = url;
         a.download = 'wbv-variations.csv';
-        document.body.appendChild( a );
+        document.body.appendChild(a);
         a.click();
         a.remove();
-        URL.revokeObjectURL( url );
+        URL.revokeObjectURL(url);
     }
 
     function attachProductHandlers() {
         // Product-level checkboxes that toggle child variation checkboxes
-        document.querySelectorAll( '.wbv-select-product' ).forEach( cb => {
+        document.querySelectorAll('.wbv-select-product').forEach(cb => {
             cb.onclick = function () {
                 const pid = this.dataset.productId;
                 const checked = this.checked;
-                document.querySelectorAll( `.wbv-select-variation[data-product-id="${ pid }"]` ).forEach( vcb => vcb.checked = checked );
+                document.querySelectorAll(`.wbv-select-variation[data-product-id="${pid}"]`).forEach(vcb => vcb.checked = checked);
             };
-        } );
+        });
     }
 
     function getSelectedVariationIds() {
-        const checked = Array.from( document.querySelectorAll( '.wbv-select-variation:checked' ) );
-        return checked.map( c => parseInt( c.getAttribute( 'data-vid' ), 10 ) ).filter( Boolean );
+        const checked = Array.from(document.querySelectorAll('.wbv-select-variation:checked'));
+        return checked.map(c => parseInt(c.getAttribute('data-vid'), 10)).filter(Boolean);
     }
 
     async function handlePreview() {
-        const previewBtn = qs( '#wbv-preview-btn' );
-        if ( previewBtn ) {
+        const previewBtn = qs('#wbv-preview-btn');
+        if (previewBtn) {
             previewBtn.disabled = true;
             previewBtn.dataset._orig = previewBtn.textContent;
             previewBtn.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.searching) ? wbvPricer.i18n.searching : 'Searching…';
         }
         const selected = getSelectedVariationIds();
-        if ( selected.length === 0 ) {
-            alert( (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noSelection) ? wbvPricer.i18n.noSelection : 'No variations selected' );
+        if (selected.length === 0) {
+            alert((wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noSelection) ? wbvPricer.i18n.noSelection : 'No variations selected');
             return;
         }
 
-        const mode = qs( '#wbv-mode' ).value;
-        const value = parseFloat( qs( '#wbv-value' ).value || 0 );
-        const target = qs( '#wbv-target' ).value;
+        const mode = qs('#wbv-mode').value;
+        const value = parseFloat(qs('#wbv-value').value || 0);
+        const target = qs('#wbv-target').value;
 
-        const opLabel = ( qs( '#wbv-operation-label' ) && qs( '#wbv-operation-label' ).value ) ? qs( '#wbv-operation-label' ).value : '';
+        const opLabel = (qs('#wbv-operation-label') && qs('#wbv-operation-label').value) ? qs('#wbv-operation-label').value : '';
         const url = `${restRoot}/update`;
-        const res = await fetch( url, {
+        const res = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-WP-Nonce': nonce,
             },
-            body: JSON.stringify( { variations: selected, mode: mode, value: value, target: target, dry_run: true, operation_label: opLabel } ),
-        } );
+            body: JSON.stringify({ variations: selected, mode: mode, value: value, target: target, dry_run: true, operation_label: opLabel }),
+        });
 
         const data = await res.json();
-        renderPreview( data );
-        if ( previewBtn ) {
+        renderPreview(data);
+        if (previewBtn) {
             previewBtn.disabled = false;
             previewBtn.textContent = previewBtn.dataset._orig || 'Preview';
         }
     }
 
-    function renderPreview( data ) {
-        const container = qs( '#wbv-preview' );
+    function renderPreview(data) {
+        const container = qs('#wbv-preview');
         container.innerHTML = '';
-        if ( ! data || ! data.preview ) {
-            const p = document.createElement( 'p' ); p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noPreview) ? wbvPricer.i18n.noPreview : 'No preview';
-            container.appendChild( p );
+        if (!data || !data.preview) {
+            const p = document.createElement('p'); p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noPreview) ? wbvPricer.i18n.noPreview : 'No preview';
+            container.appendChild(p);
             return;
         }
 
-        const h = document.createElement( 'h3' ); h.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.previewTitle) ? wbvPricer.i18n.previewTitle : 'Preview';
-        container.appendChild( h );
-        const table = document.createElement( 'table' ); table.className = 'wbv-variations';
-        const thead = document.createElement( 'thead' ); thead.innerHTML = '<tr><th>Variation</th><th>Old</th><th>New</th></tr>';
-        table.appendChild( thead );
-        const tbody = document.createElement( 'tbody' );
+        const h = document.createElement('h3'); h.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.previewTitle) ? wbvPricer.i18n.previewTitle : 'Preview';
+        container.appendChild(h);
+        const table = document.createElement('table'); table.className = 'wbv-variations';
+        const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Variation</th><th>Old</th><th>New</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
 
-        data.preview.forEach( p => {
-            const tr = document.createElement( 'tr' );
-            const tdId = document.createElement( 'td' ); tdId.textContent = p.variation_id; tr.appendChild( tdId );
-            const tdOld = document.createElement( 'td' ); tdOld.textContent = p.old_price; tr.appendChild( tdOld );
-            const tdNew = document.createElement( 'td' ); tdNew.textContent = p.new_price; tdNew.style.color = 'green'; tr.appendChild( tdNew );
-            tbody.appendChild( tr );
-        } );
+        data.preview.forEach(p => {
+            const tr = document.createElement('tr');
+            const tdId = document.createElement('td'); tdId.textContent = p.variation_id; tr.appendChild(tdId);
+            const tdOld = document.createElement('td'); tdOld.textContent = p.old_price; tr.appendChild(tdOld);
+            const tdNew = document.createElement('td'); tdNew.textContent = p.new_price; tdNew.style.color = 'green'; tr.appendChild(tdNew);
+            tbody.appendChild(tr);
+        });
 
-        table.appendChild( tbody );
-        container.appendChild( table );
+        table.appendChild(tbody);
+        container.appendChild(table);
     }
 
     async function handleApply() {
-        const applyBtn = qs( '#wbv-apply-btn' );
-        if ( applyBtn ) {
+        const applyBtn = qs('#wbv-apply-btn');
+        if (applyBtn) {
             applyBtn.disabled = true;
             applyBtn.dataset._orig = applyBtn.textContent;
             applyBtn.textContent = 'Working…';
         }
         const selected = getSelectedVariationIds();
-        if ( selected.length === 0 ) {
-            alert( (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noSelection) ? wbvPricer.i18n.noSelection : 'No variations selected' );
+        if (selected.length === 0) {
+            alert((wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noSelection) ? wbvPricer.i18n.noSelection : 'No variations selected');
             return;
         }
 
-        const mode = qs( '#wbv-mode' ).value;
-        const value = parseFloat( qs( '#wbv-value' ).value || 0 );
-        const target = qs( '#wbv-target' ).value;
+        const mode = qs('#wbv-mode').value;
+        const value = parseFloat(qs('#wbv-value').value || 0);
+        const target = qs('#wbv-target').value;
 
-        const opLabel = ( qs( '#wbv-operation-label' ) && qs( '#wbv-operation-label' ).value ) ? qs( '#wbv-operation-label' ).value : '';
+        const opLabel = (qs('#wbv-operation-label') && qs('#wbv-operation-label').value) ? qs('#wbv-operation-label').value : '';
         const url = `${restRoot}/update`;
-        const res = await fetch( url, {
+        const res = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-WP-Nonce': nonce,
             },
-            body: JSON.stringify( { variations: selected, mode: mode, value: value, target: target, dry_run: false, operation_label: opLabel } ),
-        } );
+            body: JSON.stringify({ variations: selected, mode: mode, value: value, target: target, dry_run: false, operation_label: opLabel }),
+        });
 
-    const data = await res.json();
-        if ( data.status === 'scheduled' ) {
-            const msg = `${ (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.updateScheduled) ? wbvPricer.i18n.updateScheduled : 'Update scheduled' }: ${ data.operation_id } (${ data.chunks } chunks)`;
-            alert( msg );
+        const data = await res.json();
+        if (data.status === 'scheduled') {
+            const msg = `${(wbvPricer && wbvPricer.i18n && wbvPricer.i18n.updateScheduled) ? wbvPricer.i18n.updateScheduled : 'Update scheduled'}: ${data.operation_id} (${data.chunks} chunks)`;
+            alert(msg);
             loadOperations();
             // Start watching operation progress
-            watchOperation( data.operation_id, data.total );
-        } else if ( data.applied ) {
-            alert( `${ (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.updatedVariations) ? wbvPricer.i18n.updatedVariations : 'Updated variations' }: ${ data.applied.length }` );
+            watchOperation(data.operation_id, data.total);
+        } else if (data.applied) {
+            alert(`${(wbvPricer && wbvPricer.i18n && wbvPricer.i18n.updatedVariations) ? wbvPricer.i18n.updatedVariations : 'Updated variations'}: ${data.applied.length}`);
             loadOperations();
-        } else if ( data.errors && data.errors.length ) {
-            alert( `Completed with ${ data.errors.length } errors` );
+        } else if (data.errors && data.errors.length) {
+            alert(`Completed with ${data.errors.length} errors`);
             loadOperations();
         }
-        if ( applyBtn ) {
+        if (applyBtn) {
             applyBtn.disabled = false;
             applyBtn.textContent = applyBtn.dataset._orig || 'Apply Changes';
         }
     }
 
     let _wbvPollInterval = null;
-    function watchOperation( operation_id, total ) {
-    const container = qs( '#wbv-preview' );
-    container.innerHTML = '';
-    const progressDiv = document.createElement( 'div' ); progressDiv.className = 'wbv-progress';
-    const progressBar = document.createElement( 'div' ); progressBar.className = 'wbv-progress-bar'; progressBar.style.width = '0%'; progressBar.textContent = '0%';
-    progressDiv.appendChild( progressBar );
-    container.appendChild( progressDiv );
-    const p = document.createElement( 'p' ); p.textContent = 'Operation: ' + operation_id; container.appendChild( p );
+    function watchOperation(operation_id, total) {
+        const container = qs('#wbv-preview');
+        container.innerHTML = '';
+        const progressDiv = document.createElement('div'); progressDiv.className = 'wbv-progress';
+        const progressBar = document.createElement('div'); progressBar.className = 'wbv-progress-bar'; progressBar.style.width = '0%'; progressBar.textContent = '0%';
+        progressDiv.appendChild(progressBar);
+        container.appendChild(progressDiv);
+        const p = document.createElement('p'); p.textContent = 'Operation: ' + operation_id; container.appendChild(p);
 
-    // Disable controls while watching
-        qs( '#wbv-preview-btn' ).disabled = true;
-        qs( '#wbv-apply-btn' ).disabled = true;
-    container.setAttribute( 'aria-busy', 'true' );
+        // Disable controls while watching
+        qs('#wbv-preview-btn').disabled = true;
+        qs('#wbv-apply-btn').disabled = true;
+        container.setAttribute('aria-busy', 'true');
 
-        _wbvPollInterval = setInterval( async function () {
+        _wbvPollInterval = setInterval(async function () {
             try {
-                const res = await fetch( `${restRoot}/operations/${ operation_id }`, { headers: { 'X-WP-Nonce': nonce } } );
-                if ( ! res.ok ) return;
+                const res = await fetch(`${restRoot}/operations/${operation_id}`, { headers: { 'X-WP-Nonce': nonce } });
+                if (!res.ok) return;
                 const json = await res.json();
-                const processed = ( json.rows && json.rows.length ) ? json.rows.length : 0;
-                const percent = total > 0 ? Math.round( ( processed / total ) * 100 ) : 0;
-                const bar = container.querySelector( '.wbv-progress-bar' );
-                if ( bar ) {
+                const processed = (json.rows && json.rows.length) ? json.rows.length : 0;
+                const percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+                const bar = container.querySelector('.wbv-progress-bar');
+                if (bar) {
                     bar.style.width = percent + '%';
                     bar.textContent = percent + '%';
                 }
 
-                if ( processed >= total ) {
-                    clearInterval( _wbvPollInterval );
+                if (processed >= total) {
+                    clearInterval(_wbvPollInterval);
                     _wbvPollInterval = null;
-                    qs( '#wbv-preview-btn' ).disabled = false;
-                    qs( '#wbv-apply-btn' ).disabled = false;
-                    container.removeAttribute( 'aria-busy' );
+                    qs('#wbv-preview-btn').disabled = false;
+                    qs('#wbv-apply-btn').disabled = false;
+                    container.removeAttribute('aria-busy');
                     loadOperations();
                 }
-            } catch ( e ) {
+            } catch (e) {
                 // ignore polling errors
             }
-        }, 3000 );
+        }, 3000);
     }
 
     async function loadOperations() {
         const url = `${restRoot}/operations`;
-        const res = await fetch( url, { headers: { 'X-WP-Nonce': nonce } } );
-        if ( ! res.ok ) return;
+        const res = await fetch(url, { headers: { 'X-WP-Nonce': nonce } });
+        if (!res.ok) return;
         const json = await res.json();
-        renderOperations( json.operations || [] );
+        renderOperations(json.operations || []);
     }
 
-    function renderOperations( ops ) {
-        const container = qs( '#wbv-operations' );
+    function renderOperations(ops) {
+        const container = qs('#wbv-operations');
         container.innerHTML = '';
-        if ( ! ops || ops.length === 0 ) {
-            const p = document.createElement( 'p' ); p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noOperations) ? wbvPricer.i18n.noOperations : 'No recent operations'; container.appendChild( p );
+        if (!ops || ops.length === 0) {
+            const p = document.createElement('p'); p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noOperations) ? wbvPricer.i18n.noOperations : 'No recent operations'; container.appendChild(p);
             return;
         }
 
-        const table = document.createElement( 'table' ); table.className = 'wbv-variations';
-        const thead = document.createElement( 'thead' ); thead.innerHTML = '<tr><th>Operation</th><th>Label</th><th>User</th><th>Date</th><th>Changes</th><th>Reverted</th><th>Actions</th></tr>';
-        table.appendChild( thead );
-        const tbody = document.createElement( 'tbody' );
+        const table = document.createElement('table'); table.className = 'wbv-variations';
+        const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Operation</th><th>Label</th><th>User</th><th>Date</th><th>Changes</th><th>Reverted</th><th>Actions</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
 
-        ops.forEach( o => {
-            const tr = document.createElement( 'tr' );
-            const tdOp = document.createElement( 'td' ); tdOp.textContent = o.operation_id; tr.appendChild( tdOp );
-            const tdLabel = document.createElement( 'td' ); tdLabel.textContent = o.operation_label || ''; tr.appendChild( tdLabel );
-            const tdUser = document.createElement( 'td' ); tdUser.textContent = o.user_id; tr.appendChild( tdUser );
-            const tdDate = document.createElement( 'td' ); tdDate.textContent = o.created_at; tr.appendChild( tdDate );
-            const tdChanges = document.createElement( 'td' ); tdChanges.textContent = o.changes; tr.appendChild( tdChanges );
-            const tdReverted = document.createElement( 'td' ); tdReverted.textContent = o.is_reverted ? 'Yes' : 'No'; tr.appendChild( tdReverted );
-            const tdActions = document.createElement( 'td' );
-            const viewBtn = document.createElement( 'button' ); viewBtn.className = 'wbv-view-rows button'; viewBtn.dataset.op = o.operation_id; viewBtn.textContent = 'View';
-            const undoBtn = document.createElement( 'button' ); undoBtn.className = 'wbv-undo button'; undoBtn.dataset.op = o.operation_id; undoBtn.textContent = 'Undo';
-            tdActions.appendChild( viewBtn ); tdActions.appendChild( document.createTextNode(' ') ); tdActions.appendChild( undoBtn ); tr.appendChild( tdActions );
-            tbody.appendChild( tr );
-        } );
+        ops.forEach(o => {
+            const tr = document.createElement('tr');
+            const tdOp = document.createElement('td'); tdOp.textContent = o.operation_id; tr.appendChild(tdOp);
+            const tdLabel = document.createElement('td'); tdLabel.textContent = o.operation_label || ''; tr.appendChild(tdLabel);
+            const tdUser = document.createElement('td'); tdUser.textContent = o.user_id; tr.appendChild(tdUser);
+            const tdDate = document.createElement('td'); tdDate.textContent = o.created_at; tr.appendChild(tdDate);
+            const tdChanges = document.createElement('td'); tdChanges.textContent = o.changes; tr.appendChild(tdChanges);
+            const tdReverted = document.createElement('td'); tdReverted.textContent = o.is_reverted ? 'Yes' : 'No'; tr.appendChild(tdReverted);
+            const tdActions = document.createElement('td');
+            const viewBtn = document.createElement('button'); viewBtn.className = 'wbv-view-rows button'; viewBtn.dataset.op = o.operation_id; viewBtn.textContent = 'View';
+            const undoBtn = document.createElement('button'); undoBtn.className = 'wbv-undo button'; undoBtn.dataset.op = o.operation_id; undoBtn.textContent = 'Undo';
+            tdActions.appendChild(viewBtn); tdActions.appendChild(document.createTextNode(' ')); tdActions.appendChild(undoBtn); tr.appendChild(tdActions);
+            tbody.appendChild(tr);
+        });
 
-        table.appendChild( tbody ); container.appendChild( table );
+        table.appendChild(tbody); container.appendChild(table);
 
         // Wire up buttons
-        container.querySelectorAll( '.wbv-view-rows' ).forEach( btn => {
-            btn.addEventListener( 'click', async function ( e ) {
+        container.querySelectorAll('.wbv-view-rows').forEach(btn => {
+            btn.addEventListener('click', async function (e) {
                 const op = this.dataset.op;
-                await loadOperationRows( op );
-            } );
-        } );
+                await loadOperationRows(op);
+            });
+        });
 
-        container.querySelectorAll( '.wbv-undo' ).forEach( btn => {
-            btn.addEventListener( 'click', async function ( e ) {
+        container.querySelectorAll('.wbv-undo').forEach(btn => {
+            btn.addEventListener('click', async function (e) {
                 const op = this.dataset.op;
-                await undoOperation( op );
-            } );
-        } );
+                await undoOperation(op);
+            });
+        });
     }
 
-    async function loadOperationRows( operation_id ) {
-        const url = `${restRoot}/operations/${ operation_id }`;
-        const res = await fetch( url, { headers: { 'X-WP-Nonce': nonce } } );
-        if ( ! res.ok ) return;
+    async function loadOperationRows(operation_id) {
+        const url = `${restRoot}/operations/${operation_id}`;
+        const res = await fetch(url, { headers: { 'X-WP-Nonce': nonce } });
+        if (!res.ok) return;
         const json = await res.json();
-        const container = qs( '#wbv-operation-rows' );
-        if ( ! json.rows || json.rows.length === 0 ) {
-            const p = document.createElement( 'p' ); p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noRows) ? wbvPricer.i18n.noRows : 'No rows'; container.appendChild( p );
+        const container = qs('#wbv-operation-rows');
+        if (!json.rows || json.rows.length === 0) {
+            const p = document.createElement('p'); p.textContent = (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.noRows) ? wbvPricer.i18n.noRows : 'No rows'; container.appendChild(p);
             return;
         }
 
-        const h = document.createElement( 'h3' ); h.textContent = 'Operation rows'; container.appendChild( h );
-        const table = document.createElement( 'table' ); table.className = 'wbv-variations';
-        const thead = document.createElement( 'thead' ); thead.innerHTML = '<tr><th>Variation</th><th>Old</th><th>New</th><th>Target</th><th>Reverted</th></tr>';
-        table.appendChild( thead );
-        const tbody = document.createElement( 'tbody' );
-        json.rows.forEach( r => {
-            const tr = document.createElement( 'tr' );
-            const tdV = document.createElement( 'td' ); tdV.textContent = r.variation_id; tr.appendChild( tdV );
-            const tdOld = document.createElement( 'td' ); tdOld.textContent = r.old_price; tr.appendChild( tdOld );
-            const tdNew = document.createElement( 'td' ); tdNew.textContent = r.new_price; tr.appendChild( tdNew );
-            const tdTarget = document.createElement( 'td' ); tdTarget.textContent = r.target; tr.appendChild( tdTarget );
-            const tdReverted = document.createElement( 'td' ); tdReverted.textContent = r.reverted == 1 ? 'Yes' : 'No'; tr.appendChild( tdReverted );
-            tbody.appendChild( tr );
-        } );
-        table.appendChild( tbody ); container.appendChild( table );
+        const h = document.createElement('h3'); h.textContent = 'Operation rows'; container.appendChild(h);
+        const table = document.createElement('table'); table.className = 'wbv-variations';
+        const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Variation</th><th>Old</th><th>New</th><th>Target</th><th>Reverted</th></tr>';
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        json.rows.forEach(r => {
+            const tr = document.createElement('tr');
+            const tdV = document.createElement('td'); tdV.textContent = r.variation_id; tr.appendChild(tdV);
+            const tdOld = document.createElement('td'); tdOld.textContent = r.old_price; tr.appendChild(tdOld);
+            const tdNew = document.createElement('td'); tdNew.textContent = r.new_price; tr.appendChild(tdNew);
+            const tdTarget = document.createElement('td'); tdTarget.textContent = r.target; tr.appendChild(tdTarget);
+            const tdReverted = document.createElement('td'); tdReverted.textContent = r.reverted == 1 ? 'Yes' : 'No'; tr.appendChild(tdReverted);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody); container.appendChild(table);
     }
 
-    async function undoOperation( operation_id ) {
+    async function undoOperation(operation_id) {
         // Get preview first
-        const previewRes = await fetch( `${restRoot}/undo`, {
+        const previewRes = await fetch(`${restRoot}/undo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-            body: JSON.stringify( { operation_id: operation_id, dry_run: true } ),
-        } );
+            body: JSON.stringify({ operation_id: operation_id, dry_run: true }),
+        });
         const preview = await previewRes.json();
-        if ( ! preview || ! preview.preview ) {
-            alert( (wbvPricer && wbvPricer.i18n && wbvPricer.i18n.unablePreview) ? wbvPricer.i18n.unablePreview : 'Unable to compute revert preview' );
+        if (!preview || !preview.preview) {
+            alert((wbvPricer && wbvPricer.i18n && wbvPricer.i18n.unablePreview) ? wbvPricer.i18n.unablePreview : 'Unable to compute revert preview');
             return;
         }
 
         // Show preview and ask confirmation
-        if ( ! confirm( `Revert ${ preview.preview.length } variations for operation ${ operation_id }?` ) ) {
+        if (!confirm(`Revert ${preview.preview.length} variations for operation ${operation_id}?`)) {
             return;
         }
 
         // Perform revert
-        const res = await fetch( `${restRoot}/undo`, {
+        const res = await fetch(`${restRoot}/undo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-            body: JSON.stringify( { operation_id: operation_id, dry_run: false } ),
-        } );
+            body: JSON.stringify({ operation_id: operation_id, dry_run: false }),
+        });
         const data = await res.json();
-        if ( data.status === 'scheduled' ) {
-            alert( `Revert scheduled: ${ data.revert_operation_id }` );
+        if (data.status === 'scheduled') {
+            alert(`Revert scheduled: ${data.revert_operation_id}`);
             loadOperations();
-        } else if ( data.status === 'completed' ) {
-            alert( `Revert completed: ${ data.revert_operation_id }` );
+        } else if (data.status === 'completed') {
+            alert(`Revert completed: ${data.revert_operation_id}`);
             loadOperations();
         } else {
-            alert( 'Undo initiated' );
+            alert('Undo initiated');
             loadOperations();
         }
     }
 
-    document.addEventListener( 'DOMContentLoaded', setupHandlers );
+    document.addEventListener('DOMContentLoaded', setupHandlers);
+
+    // ========== Default Attributes Mode ==========
+    let currentMode = 'prices'; // 'prices' or 'defaults'
+
+    function setupModeHandlers() {
+        const tabPrices = qs('#wbv-tab-prices');
+        const tabDefaults = qs('#wbv-tab-defaults');
+        const priceControls = qs('#wbv-toolbar');
+        const defaultsControls = qs('#wbv-defaults-controls');
+
+        if (!tabPrices || !tabDefaults) return;
+
+        tabPrices.addEventListener('click', function (e) {
+            e.preventDefault();
+            currentMode = 'prices';
+            tabPrices.classList.add('nav-tab-active');
+            tabDefaults.classList.remove('nav-tab-active');
+            if (priceControls) priceControls.style.display = '';
+            if (defaultsControls) defaultsControls.style.display = 'none';
+        });
+
+        tabDefaults.addEventListener('click', function (e) {
+            e.preventDefault();
+            currentMode = 'defaults';
+            tabDefaults.classList.add('nav-tab-active');
+            tabPrices.classList.remove('nav-tab-active');
+            if (priceControls) priceControls.style.display = 'none';
+            if (defaultsControls) defaultsControls.style.display = '';
+        });
+    }
+
+    function renderProductsForDefaults(container, products) {
+        container.innerHTML = '';
+        if (!products || products.length === 0) {
+            const p = document.createElement('p');
+            p.textContent = 'No variable products found';
+            container.appendChild(p);
+            return;
+        }
+
+        products.forEach(product => {
+            const wrap = document.createElement('div');
+            wrap.className = 'wbv-product wbv-product-defaults';
+            wrap.dataset.productId = product.product_id;
+
+            const header = document.createElement('div');
+            header.className = 'wbv-product-header';
+
+            const productCheckbox = document.createElement('input');
+            productCheckbox.type = 'checkbox';
+            productCheckbox.className = 'wbv-select-product-default';
+            productCheckbox.dataset.productId = product.product_id;
+            header.appendChild(productCheckbox);
+
+            const title = document.createElement('h3');
+            title.textContent = product.title + (product.sku ? ' — ' + product.sku : '');
+            header.appendChild(title);
+
+            wrap.appendChild(header);
+
+            // Display current default attributes
+            const defaultsDiv = document.createElement('div');
+            defaultsDiv.className = 'wbv-current-defaults';
+            defaultsDiv.style.padding = '10px';
+            defaultsDiv.style.background = '#f9f9f9';
+            defaultsDiv.style.marginTop = '10px';
+
+            const defaultsLabel = document.createElement('strong');
+            defaultsLabel.textContent = 'Current Defaults: ';
+            defaultsDiv.appendChild(defaultsLabel);
+
+            if (product.default_attributes && product.default_attributes.length > 0) {
+                const defaultsList = product.default_attributes.map(attr =>
+                    `${attr.label}: ${attr.display_value}`
+                ).join(', ');
+                const span = document.createElement('span');
+                span.textContent = defaultsList;
+                defaultsDiv.appendChild(span);
+            } else {
+                const span = document.createElement('span');
+                span.textContent = 'None set';
+                span.style.fontStyle = 'italic';
+                span.style.color = '#999';
+                defaultsDiv.appendChild(span);
+            }
+
+            wrap.appendChild(defaultsDiv);
+            container.appendChild(wrap);
+        });
+
+        updateDefaultsSelector();
+    }
+
+    function updateDefaultsSelector() {
+        const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+        const selector = qs('#wbv-defaults-selector');
+        const attributesDiv = qs('#wbv-defaults-attributes');
+
+        if (selected.length === 0) {
+            if (selector) selector.style.display = 'none';
+            return;
+        }
+
+        if (selector) selector.style.display = '';
+
+        // Collect all unique attributes from selected products
+        const attributesMap = new Map();
+
+        selected.forEach(cb => {
+            const pid = parseInt(cb.dataset.productId);
+            const product = lastProducts.find(p => p.product_id === pid);
+
+            if (product && product.variations) {
+                product.variations.forEach(v => {
+                    v.attributes.forEach(attr => {
+                        if (!attributesMap.has(attr.key)) {
+                            attributesMap.set(attr.key, {
+                                key: attr.key,
+                                label: attr.label,
+                                values: new Set()
+                            });
+                        }
+                        attributesMap.get(attr.key).values.add(attr.value);
+                    });
+                });
+            }
+        });
+
+        // Render attribute selectors
+        attributesDiv.innerHTML = '';
+
+        attributesMap.forEach((attrData, attrKey) => {
+            const attrDiv = document.createElement('div');
+            attrDiv.style.marginBottom = '10px';
+
+            const label = document.createElement('label');
+            label.textContent = attrData.label + ': ';
+            label.style.display = 'inline-block';
+            label.style.minWidth = '150px';
+            attrDiv.appendChild(label);
+
+            const select = document.createElement('select');
+            select.dataset.attributeKey = attrKey;
+            select.style.minWidth = '200px';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '— No change —';
+            select.appendChild(defaultOption);
+
+            Array.from(attrData.values).sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
+
+            attrDiv.appendChild(select);
+            attributesDiv.appendChild(attrDiv);
+        });
+    }
+
+    function handleDefaultsPreview() {
+        const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+        if (selected.length === 0) {
+            alert('Please select at least one product');
+            return;
+        }
+
+        const defaults = collectDefaultsFromUI();
+        if (Object.keys(defaults).length === 0) {
+            alert('Please set at least one default attribute value');
+            return;
+        }
+
+        const productIds = selected.map(cb => parseInt(cb.dataset.productId));
+
+        fetch(`${restRoot}/set-defaults`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+            body: JSON.stringify({
+                product_ids: productIds,
+                defaults: defaults,
+                dry_run: true
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                displayDefaultsPreview(data.preview || []);
+            })
+            .catch(err => {
+                alert('Error: ' + err.message);
+            });
+    }
+
+    function handleDefaultsApply() {
+        const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+        if (selected.length === 0) {
+            alert('Please select at least one product');
+            return;
+        }
+
+        const defaults = collectDefaultsFromUI();
+        if (Object.keys(defaults).length === 0) {
+            alert('Please set at least one default attribute value');
+            return;
+        }
+
+        if (!confirm(`Apply default attributes to ${selected.length} product(s)?`)) {
+            return;
+        }
+
+        const productIds = selected.map(cb => parseInt(cb.dataset.productId));
+        const operationLabel = qs('#wbv-defaults-operation-label') ? qs('#wbv-defaults-operation-label').value : '';
+
+        fetch(`${restRoot}/set-defaults`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+            body: JSON.stringify({
+                product_ids: productIds,
+                defaults: defaults,
+                dry_run: false,
+                operation_label: operationLabel
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.applied && data.applied.length > 0) {
+                    alert(`Successfully updated ${data.applied.length} product(s)`);
+                    // Refresh the search to show updated defaults
+                    qs('#wbv-search-btn').click();
+                } else {
+                    alert('No products were updated');
+                }
+            })
+            .catch(err => {
+                alert('Error: ' + err.message);
+            });
+    }
+
+    function collectDefaultsFromUI() {
+        const selected = Array.from(document.querySelectorAll('.wbv-select-product-default:checked'));
+        const selects = Array.from(document.querySelectorAll('#wbv-defaults-attributes select'));
+
+        const defaults = {};
+
+        selected.forEach(cb => {
+            const pid = parseInt(cb.dataset.productId);
+            defaults[pid] = {};
+
+            selects.forEach(select => {
+                if (select.value) {
+                    const attrKey = select.dataset.attributeKey;
+                    defaults[pid][attrKey] = select.value;
+                }
+            });
+        });
+
+        return defaults;
+    }
+
+    function displayDefaultsPreview(preview) {
+        const previewDiv = qs('#wbv-preview');
+        if (!previewDiv) return;
+
+        previewDiv.innerHTML = '';
+
+        if (!preview || preview.length === 0) {
+            previewDiv.innerHTML = '<p>No changes to preview</p>';
+            return;
+        }
+
+        const heading = document.createElement('h3');
+        heading.textContent = 'Preview: Default Attributes Changes';
+        previewDiv.appendChild(heading);
+
+        const table = document.createElement('table');
+        table.className = 'wbv-preview-table';
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Product</th><th>Old Defaults</th><th>New Defaults</th></tr>';
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+
+        preview.forEach(item => {
+            const tr = document.createElement('tr');
+
+            const tdProduct = document.createElement('td');
+            tdProduct.textContent = item.product_name;
+            tdProduct.style.padding = '8px';
+            tdProduct.style.border = '1px solid #ddd';
+            tr.appendChild(tdProduct);
+
+            const tdOld = document.createElement('td');
+            tdOld.textContent = formatDefaults(item.old_defaults);
+            tdOld.style.padding = '8px';
+            tdOld.style.border = '1px solid #ddd';
+            tr.appendChild(tdOld);
+
+            const tdNew = document.createElement('td');
+            tdNew.textContent = formatDefaults(item.new_defaults);
+            tdNew.style.padding = '8px';
+            tdNew.style.border = '1px solid #ddd';
+            tdNew.style.fontWeight = 'bold';
+            tr.appendChild(tdNew);
+
+            tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        previewDiv.appendChild(table);
+    }
+
+    function formatDefaults(defaults) {
+        if (!defaults || Object.keys(defaults).length === 0) {
+            return 'None';
+        }
+        return Object.entries(defaults).map(([key, value]) => {
+            const label = key.replace(/^pa_/, '').replace(/_/g, ' ');
+            return `${label}: ${value}`;
+        }).join(', ');
+    }
+
+    // Override renderProducts to handle both modes
+    const originalRenderProducts = renderProducts;
+    renderProducts = function (container, products) {
+        if (currentMode === 'defaults') {
+            renderProductsForDefaults(container, products);
+        } else {
+            originalRenderProducts(container, products);
+        }
+    };
+
+    // Setup mode handlers and defaults event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+        setupModeHandlers();
+
+        // Attach event listeners for defaults mode buttons
+        const previewBtn = qs('#wbv-defaults-preview-btn');
+        const applyBtn = qs('#wbv-defaults-apply-btn');
+
+        if (previewBtn) {
+            previewBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                handleDefaultsPreview();
+            });
+        }
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                handleDefaultsApply();
+            });
+        }
+
+        // Handle select-all for defaults mode
+        const selectAllCheckbox = qs('#wbv-select-all-visible');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                if (currentMode === 'defaults') {
+                    const checkboxes = document.querySelectorAll('.wbv-select-product-default');
+                    checkboxes.forEach(cb => {
+                        cb.checked = selectAllCheckbox.checked;
+                    });
+                    updateDefaultsSelector();
+                }
+            });
+        }
+
+        // Delegate change event for product checkboxes in defaults mode
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('wbv-select-product-default')) {
+                updateDefaultsSelector();
+            }
+        });
+    });
 
 })();

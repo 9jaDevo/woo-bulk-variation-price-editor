@@ -1,9 +1,10 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-class WBV_Logger {
+class WBV_Logger
+{
     /**
      * Log multiple change rows for an operation. Optionally include an operation label.
      *
@@ -11,23 +12,24 @@ class WBV_Logger {
      * @param array  $rows
      * @param string $operation_label
      */
-    public static function log_changes( $operation_id, $rows, $operation_label = '' ) {
+    public static function log_changes($operation_id, $rows, $operation_label = '')
+    {
         global $wpdb;
         $table = $wpdb->prefix . 'wbv_changes';
 
-        foreach ( $rows as $r ) {
-            $wpdb->insert( $table, array(
+        foreach ($rows as $r) {
+            $wpdb->insert($table, array(
                 'operation_id'    => $operation_id,
                 'operation_label' => $operation_label,
-                'variation_id'    => isset( $r['variation_id'] ) ? (int) $r['variation_id'] : 0,
-                'product_id'      => isset( $r['product_id'] ) ? (int) $r['product_id'] : 0,
-                'old_price'       => isset( $r['old_price'] ) ? (string) $r['old_price'] : null,
-                'new_price'       => isset( $r['new_price'] ) ? (string) $r['new_price'] : null,
-                'mode'            => isset( $r['mode'] ) ? (string) $r['mode'] : null,
-                'value'           => isset( $r['value'] ) ? (string) $r['value'] : null,
-                'target'          => isset( $r['target'] ) ? (string) $r['target'] : null,
+                'variation_id'    => isset($r['variation_id']) ? (int) $r['variation_id'] : 0,
+                'product_id'      => isset($r['product_id']) ? (int) $r['product_id'] : 0,
+                'old_price'       => isset($r['old_price']) ? (string) $r['old_price'] : null,
+                'new_price'       => isset($r['new_price']) ? (string) $r['new_price'] : null,
+                'mode'            => isset($r['mode']) ? (string) $r['mode'] : null,
+                'value'           => isset($r['value']) ? (string) $r['value'] : null,
+                'target'          => isset($r['target']) ? (string) $r['target'] : null,
                 'user_id'         => get_current_user_id(),
-            ) );
+            ));
         }
     }
 
@@ -37,7 +39,8 @@ class WBV_Logger {
      * @param int $limit
      * @return array
      */
-    public static function get_recent_operations( $limit = 20 ) {
+    public static function get_recent_operations($limit = 20)
+    {
         global $wpdb;
         $table = $wpdb->prefix . 'wbv_changes';
 
@@ -46,10 +49,10 @@ class WBV_Logger {
             $limit
         );
 
-        $rows = $wpdb->get_results( $sql );
+        $rows = $wpdb->get_results($sql);
         $out = array();
-        if ( $rows ) {
-            foreach ( $rows as $r ) {
+        if ($rows) {
+            foreach ($rows as $r) {
                 $out[] = array(
                     'operation_id'    => $r->operation_id,
                     'operation_label' => $r->operation_label,
@@ -67,40 +70,92 @@ class WBV_Logger {
     /**
      * Get all rows for a specific operation id.
      */
-    public static function get_operation_rows( $operation_id ) {
+    public static function get_operation_rows($operation_id)
+    {
         global $wpdb;
         $table = $wpdb->prefix . 'wbv_changes';
 
-        $sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE operation_id = %s ORDER BY id ASC", $operation_id );
-        return $wpdb->get_results( $sql );
+        $sql = $wpdb->prepare("SELECT * FROM {$table} WHERE operation_id = %s ORDER BY id ASC", $operation_id);
+        return $wpdb->get_results($sql);
     }
 
     /**
      * Get a single row for an operation and variation.
      */
-    public static function get_operation_row( $operation_id, $variation_id ) {
+    public static function get_operation_row($operation_id, $variation_id)
+    {
         global $wpdb;
         $table = $wpdb->prefix . 'wbv_changes';
 
-        $sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE operation_id = %s AND variation_id = %d LIMIT 1", $operation_id, $variation_id );
-        return $wpdb->get_row( $sql );
+        $sql = $wpdb->prepare("SELECT * FROM {$table} WHERE operation_id = %s AND variation_id = %d LIMIT 1", $operation_id, $variation_id);
+        return $wpdb->get_row($sql);
     }
 
     /**
      * Mark a single log row as reverted.
      */
-    public static function mark_row_reverted( $id ) {
+    public static function mark_row_reverted($id)
+    {
         global $wpdb;
         $table = $wpdb->prefix . 'wbv_changes';
-        return $wpdb->update( $table, array( 'reverted' => 1 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
+        return $wpdb->update($table, array('reverted' => 1), array('id' => $id), array('%d'), array('%d'));
     }
 
     /**
      * Mark all rows in an operation as reverted.
      */
-    public static function mark_operation_reverted( $operation_id ) {
+    public static function mark_operation_reverted($operation_id)
+    {
         global $wpdb;
         $table = $wpdb->prefix . 'wbv_changes';
-        return $wpdb->update( $table, array( 'reverted' => 1 ), array( 'operation_id' => $operation_id ), array( '%d' ), array( '%s' ) );
+        return $wpdb->update($table, array('reverted' => 1), array('operation_id' => $operation_id), array('%d'), array('%s'));
+    }
+
+    /**
+     * Log a default attribute change for a product.
+     * Stores old and new defaults as JSON for undo capability.
+     * 
+     * @param string $operation_id
+     * @param int    $product_id
+     * @param array  $old_defaults
+     * @param array  $new_defaults
+     * @param string $operation_label
+     */
+    public static function log_default_change($operation_id, $product_id, $old_defaults, $new_defaults, $operation_label = '')
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'wbv_changes';
+
+        $wpdb->insert($table, array(
+            'operation_id'    => $operation_id,
+            'operation_label' => $operation_label,
+            'variation_id'    => 0, // Not a variation change
+            'product_id'      => (int) $product_id,
+            'old_price'       => wp_json_encode($old_defaults), // Reuse old_price field for old defaults
+            'new_price'       => wp_json_encode($new_defaults), // Reuse new_price field for new defaults
+            'mode'            => 'default_attributes',
+            'value'           => null,
+            'target'          => null,
+            'user_id'         => get_current_user_id(),
+        ));
+    }
+
+    /**
+     * Get default attribute changes for undo operation.
+     * 
+     * @param string $operation_id
+     * @return array
+     */
+    public static function get_default_changes($operation_id)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'wbv_changes';
+
+        $sql = $wpdb->prepare(
+            "SELECT * FROM {$table} WHERE operation_id = %s AND mode = 'default_attributes' ORDER BY id ASC",
+            $operation_id
+        );
+
+        return $wpdb->get_results($sql);
     }
 }
