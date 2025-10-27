@@ -10,7 +10,10 @@
     let lastProducts = [];
 
     async function performSearch(query, perPage, page) {
-        const res = await fetch(`${restRoot}/search?per_page=${perPage}&page=${page}&s=${encodeURIComponent(query)}`, {
+        const url = `${restRoot}/search?per_page=${perPage}&page=${page}&q=${encodeURIComponent(query)}`;
+        console.log('Fetching:', url);
+
+        const res = await fetch(url, {
             headers: { 'X-WP-Nonce': nonce }
         });
         if (!res.ok) {

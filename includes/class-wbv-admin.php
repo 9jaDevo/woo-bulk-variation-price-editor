@@ -159,8 +159,7 @@ class WBV_Admin
 
                 <!-- Search Toolbar -->
                 <div id="wbv-defaults-toolbar" style="margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-                    <label style="margin-right:1rem;"><input id="wbv-defaults-select-all" type="checkbox" /> <?php echo esc_html__('Select all visible', 'woo-bulk-variation-pricer'); ?></label>
-                    <input id="wbv-defaults-search" type="search" placeholder="<?php echo esc_attr__('Search products or SKU', 'woo-bulk-variation-pricer'); ?>" style="width:24%; min-height:34px;" />
+                    <input id="wbv-defaults-search" type="search" placeholder="<?php echo esc_attr__('Search products or SKU', 'woo-bulk-variation-pricer'); ?>" style="width:300px; min-height:34px;" />
                     <select id="wbv-defaults-per-page" style="min-height:34px;">
                         <option value="10">10</option>
                         <option value="25" selected>25</option>
@@ -169,23 +168,41 @@ class WBV_Admin
                         <option value="9999"><?php echo esc_html__('All', 'woo-bulk-variation-pricer'); ?></option>
                     </select>
                     <button id="wbv-defaults-search-btn" class="button button-primary"><?php echo esc_html__('Search', 'woo-bulk-variation-pricer'); ?></button>
+                    <label style="margin-left:1rem;"><input id="wbv-defaults-select-all" type="checkbox" /> <?php echo esc_html__('Select all visible', 'woo-bulk-variation-pricer'); ?></label>
                 </div>
 
-                <!-- Defaults Selector Panel -->
-                <div id="wbv-defaults-selector" style="margin-bottom:1rem; padding:1.5rem; background:#fff; border:2px solid #2271b1; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                    <h3 style="margin-top:0;"><?php echo esc_html__('Set Default Attributes', 'woo-bulk-variation-pricer'); ?></h3>
-                    <p class="wbv-selection-description" style="font-weight:bold; color:#d63638;">⚠️ <?php echo esc_html__('No products selected. Search and check the boxes above to select products.', 'woo-bulk-variation-pricer'); ?></p>
-                    <div id="wbv-defaults-attributes" style="margin:1rem 0;">
-                        <p style="color:#999; font-style:italic;"><?php echo esc_html__('Search for products first to see available attributes.', 'woo-bulk-variation-pricer'); ?></p>
+                <!-- Defaults Selector Panel - Always Visible at Top -->
+                <div id="wbv-defaults-selector" style="margin-bottom:1.5rem; padding:1.5rem; background:#fff; border:2px solid #2271b1; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top:0; color:#2271b1; display:flex; align-items:center; gap:8px;">
+                        <span class="dashicons dashicons-admin-settings" style="font-size:24px;"></span>
+                        <?php echo esc_html__('Set Default Attributes', 'woo-bulk-variation-pricer'); ?>
+                    </h3>
+                    <p class="wbv-selection-description" style="font-weight:bold; color:#d63638; margin:10px 0;">
+                        ⚠️ <?php echo esc_html__('No products selected. Search and check the boxes below to select products.', 'woo-bulk-variation-pricer'); ?>
+                    </p>
+                    <div id="wbv-defaults-attributes" style="margin:1rem 0; padding:15px; background:#f9f9f9; border-radius:4px; min-height:60px;">
+                        <p style="color:#666; font-style:italic; margin:0;">
+                            <span class="dashicons dashicons-search" style="vertical-align:middle;"></span>
+                            <?php echo esc_html__('Search for products above to see available attributes here.', 'woo-bulk-variation-pricer'); ?>
+                        </p>
                     </div>
-                    <div style="margin-top:1rem;">
-                        <input id="wbv-defaults-operation-label" type="text" placeholder="<?php echo esc_attr__('Operation label (optional)', 'woo-bulk-variation-pricer'); ?>" style="width:18rem; margin-right:0.5rem;" />
+                    <div style="margin-top:1rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <input id="wbv-defaults-operation-label" type="text" placeholder="<?php echo esc_attr__('Operation label (optional)', 'woo-bulk-variation-pricer'); ?>" style="width:250px; margin-right:0.5rem;" />
                         <button id="wbv-defaults-preview-btn" class="button"><?php echo esc_html__('Preview', 'woo-bulk-variation-pricer'); ?></button>
                         <button id="wbv-defaults-apply-btn" class="button button-primary"><?php echo esc_html__('Apply Changes', 'woo-bulk-variation-pricer'); ?></button>
                     </div>
                 </div>
 
-                <div id="wbv-defaults-results"></div>
+                <h3 style="margin:1.5rem 0 1rem 0; color:#333;">
+                    <span class="dashicons dashicons-list-view" style="vertical-align:middle;"></span>
+                    <?php echo esc_html__('Search Results - Select Products', 'woo-bulk-variation-pricer'); ?>
+                </h3>
+                <div id="wbv-defaults-results" style="background:#f9f9f9; padding:15px; border-radius:4px; min-height:100px;">
+                    <p style="color:#666; text-align:center; padding:40px 20px; margin:0;">
+                        <span class="dashicons dashicons-arrow-up-alt" style="font-size:48px; opacity:0.3;"></span><br>
+                        <strong><?php echo esc_html__('Use the search box above to find variable products', 'woo-bulk-variation-pricer'); ?></strong>
+                    </p>
+                </div>
                 <div id="wbv-defaults-preview" style="margin-top:1rem;"></div>
             </div>
         </div>
