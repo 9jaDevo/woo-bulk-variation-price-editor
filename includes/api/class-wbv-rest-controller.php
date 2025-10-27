@@ -898,7 +898,9 @@ class WBV_REST_Controller
                 }
 
                 $old_defaults = $product->get_default_attributes();
-                $new_defaults = isset($defaults[$pid]) ? $defaults[$pid] : array();
+
+                // Apply the same defaults to all products
+                $new_defaults = $defaults;
 
                 if (empty($new_defaults)) {
                     continue;
@@ -937,15 +939,16 @@ class WBV_REST_Controller
         // Use background processing for large batches
         if ($use_bg && $total > $bg_threshold) {
             // Build products data array for background processing
+            // Apply the same defaults to all products
             $products_data = array();
             foreach ($product_ids as $pid) {
                 $pid = absint($pid);
-                if (! $pid || ! isset($defaults[$pid])) {
+                if (! $pid) {
                     continue;
                 }
 
                 $sanitized_defaults = array();
-                foreach ($defaults[$pid] as $attr_key => $attr_value) {
+                foreach ($defaults as $attr_key => $attr_value) {
                     $sanitized_key = sanitize_text_field($attr_key);
                     $sanitized_value = sanitize_text_field($attr_value);
                     if ($sanitized_key && $sanitized_value) {
@@ -1003,8 +1006,8 @@ class WBV_REST_Controller
             // Get current default attributes
             $old_defaults = $product->get_default_attributes();
 
-            // Get new defaults for this product (if specified)
-            $new_defaults = isset($defaults[$pid]) ? $defaults[$pid] : array();
+            // Apply the same defaults to all products
+            $new_defaults = $defaults;
 
             if (empty($new_defaults)) {
                 continue; // No changes for this product
