@@ -777,7 +777,7 @@
     function setupModeHandlers() {
         const tabPrices = qs('#wbv-tab-prices');
         const tabDefaults = qs('#wbv-tab-defaults');
-        const priceControls = qs('#wbv-toolbar > div:last-child'); // Only the price editor controls section
+        const priceControls = qs('#wbv-price-controls'); // The price editor controls only
         const defaultsControls = qs('#wbv-defaults-controls');
         const defaultsInstructions = qs('#wbv-defaults-instructions');
 
@@ -788,7 +788,7 @@
             currentMode = 'prices';
             tabPrices.classList.add('nav-tab-active');
             tabDefaults.classList.remove('nav-tab-active');
-            if (priceControls) priceControls.style.display = '';
+            if (priceControls) priceControls.style.display = 'inline-block';
             if (defaultsControls) defaultsControls.style.display = 'none';
             if (defaultsInstructions) defaultsInstructions.style.display = 'none';
 
@@ -816,9 +816,7 @@
                 results.innerHTML = '<div style="text-align:center; padding:40px; color:#666;"><p style="font-size:16px;">👆 <strong>Start by searching for products above</strong></p><p>Use the search box to find variable products, then select them to set default attributes.</p></div>';
             }
         });
-    }
-
-    function renderProductsForDefaults(container, products) {
+    } function renderProductsForDefaults(container, products) {
         container.innerHTML = '';
         if (!products || products.length === 0) {
             const p = document.createElement('p');
@@ -882,14 +880,26 @@
     }
 
     function showDefaultsSelector() {
+        console.log('showDefaultsSelector() called');
         const selector = qs('#wbv-defaults-selector');
         const attributesDiv = qs('#wbv-defaults-attributes');
 
-        if (!selector || !attributesDiv || !lastProducts) return;
+        console.log('selector element:', selector);
+        console.log('attributesDiv element:', attributesDiv);
+        console.log('lastProducts:', lastProducts);
+
+        if (!selector || !attributesDiv || !lastProducts) {
+            console.warn('Missing required elements or data:', {
+                selector: !!selector,
+                attributesDiv: !!attributesDiv,
+                lastProducts: !!lastProducts
+            });
+            return;
+        }
 
         // Show the panel
         selector.style.display = 'block';
-        console.log('Showing defaults selector panel automatically');
+        console.log('Set selector.style.display to block, computed style:', window.getComputedStyle(selector).display);
 
         // Collect ALL attributes from all products (not just selected ones)
         const attributesMap = new Map();

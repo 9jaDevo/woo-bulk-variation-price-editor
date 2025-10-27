@@ -94,7 +94,7 @@ class WBV_Admin
                     </select>
                     <button id="wbv-search-btn" class="button button-primary"><?php echo esc_html__('Search', 'woo-bulk-variation-pricer'); ?></button>
 
-                    <div style="display:inline-block; margin-left:1rem;">
+                    <div id="wbv-price-controls" style="display:inline-block; margin-left:1rem;">
                         <label for="wbv-mode"><?php echo esc_html__('Mode', 'woo-bulk-variation-pricer'); ?>:</label>
                         <select id="wbv-mode">
                             <option value="percent"><?php echo esc_html__('Percent (+/-)', 'woo-bulk-variation-pricer'); ?></option>
